@@ -150,12 +150,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       shopifyPageId = result.pageId;
     }
 
-    // Save to DB
-    await publishLegalPage(shop, "tokushoho", {
-      shopifyPageId,
-      contentHtml,
-      formData: formDataJson,
-    });
+    // Save to DB with optimistic lock
+    const versionStr = formPayload.get("version") as string | null;
+    const expectedVersion = versionStr ? parseInt(versionStr, 10) : undefined;
+    try {
+      await publishLegalPage(shop, "tokushoho", {
+        shopifyPageId,
+        contentHtml,
+        formData: formDataJson,
+      }, expectedVersion);
+    } catch (error) {
+      if (error instanceof OptimisticLockError) {
+        return json({ success: false, intent: "publish", error: error.message }, { status: 409 });
+      }
+      throw error;
+    }
 
     return json({
       success: true,
@@ -261,10 +270,10 @@ export default function WizardPage() {
     if (pageVersion !== undefined) {
       fd.append("version", String(pageVersion));
     }
-    fetcher.submit(fd, { method: "POST" });
+    fetcherRef.current.submit(fd, { method: "POST" });
 
     setCurrentStep((prev) => Math.min(prev + 1, 3));
-  }, [currentStep, formData, fetcher, pageVersion]);
+  }, [currentStep, formData, pageVersion]);
 
   const handleBack = useCallback(() => {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
@@ -277,8 +286,8 @@ export default function WizardPage() {
     if (pageVersion !== undefined) {
       fd.append("version", String(pageVersion));
     }
-    fetcher.submit(fd, { method: "POST" });
-  }, [formData, fetcher, pageVersion]);
+    fetcherRef.current.submit(fd, { method: "POST" });
+  }, [formData, pageVersion]);
 
   // Handle action results
   useEffect(() => {

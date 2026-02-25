@@ -63,6 +63,7 @@ export async function upsertLegalPageDraft(
 
 /**
  * Publish a legal page (update with generated HTML and Shopify page ID).
+ * Uses optimistic locking via version field.
  */
 export async function publishLegalPage(
   storeId: string,
@@ -72,10 +73,17 @@ export async function publishLegalPage(
     contentHtml: string;
     formData: string;
   },
+  expectedVersion?: number,
 ) {
   const existing = await getLegalPage(storeId, pageType);
 
   if (existing) {
+    if (expectedVersion !== undefined && existing.version !== expectedVersion) {
+      throw new OptimisticLockError(
+        "このページは別のセッションで更新されています。再読み込みしてください。",
+      );
+    }
+
     return db.legalPage.update({
       where: { id: existing.id },
       data: {
