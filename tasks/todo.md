@@ -22,13 +22,13 @@
 - [x] `Dockerfile` の `node:18-alpine` を `node:20-alpine` に変更(ビルドステージ・ランタイム両方)
 - **工数**: 15分
 - **理由**: `package.json` の `engines` フィールドが `>=20.19 <22 || >=22.12` を要求。Node 18ではランタイムエラーのリスクがあり、Shopifyの審査テンプレートとも不整合。
-- **対象ファイル**: `/Applications/workspace/pepin/marutto-legal/Dockerfile` (L1, L9)
+- **対象ファイル**: `Dockerfile` (L1, L9)
 - **検証方法**: `docker build` が成功すること
 
 ### T0-2: ボタンラベルの整合性修正 ✅
 - [x] `Step3PreviewPublish.tsx` のボタンラベル「ページを公開する」→「ページを作成する」に変更
 - **理由**: ボタンが「公開する」だが実際は `published: false` で非公開作成（意図的な設計）。ラベルを実際の動作に合わせた。
-- **対象ファイル**: `/Applications/workspace/pepin/marutto-legal/app/components/wizard/Step3PreviewPublish.tsx` (L49)
+- **対象ファイル**: `app/components/wizard/Step3PreviewPublish.tsx` (L49)
 
 ### T0-3: API Version 整合性の修正 ✅
 - [x] `shopify.server.ts` の `ApiVersion.January25` を `ApiVersion.January26` に更新（L13, L29両方）
@@ -76,10 +76,10 @@
 - **工数**: 1.5日
 - **理由**: Specificationで「差別化ポイント」として明記。App Store説明文にも「フッターへの自動配置」を謳っている。未実装のままだと説明文とアプリの実態が乖離する。Shopifyのメニュー手動追加は初心者にとって分かりにくい作業であり、この自動化こそがアプリの価値。
 - **対象ファイル**:
-  - 新規: `/Applications/workspace/pepin/marutto-legal/app/lib/shopify/menu.server.ts`
-  - 修正: `/Applications/workspace/pepin/marutto-legal/app/routes/app.wizard.tsx`
-  - 修正: `/Applications/workspace/pepin/marutto-legal/app/components/wizard/Step3PreviewPublish.tsx`
-  - 修正: `/Applications/workspace/pepin/marutto-legal/shopify.app.toml`
+  - 新規: `app/lib/shopify/menu.server.ts`
+  - 修正: `app/routes/app.wizard.tsx`
+  - 修正: `app/components/wizard/Step3PreviewPublish.tsx`
+  - 修正: `shopify.app.toml`
 - **検証方法**: ページ公開後にShopify管理画面のナビゲーション設定でフッターメニューにリンクが追加されていること。既存リンクが削除されていないこと。重複追加されないこと。
 
 ### T1-2: 完了画面の充実
@@ -95,8 +95,8 @@
 - **工数**: 4時間
 - **理由**: 現在の完了表示はBannerのみで、ユーザーが次に何をすべきか不明。FTX(First Time Experience)を改善し、レビュー獲得の導線を確保する。KPI「レビュー数」に直結。
 - **対象ファイル**:
-  - 新規: `/Applications/workspace/pepin/marutto-legal/app/components/wizard/CompletionScreen.tsx`
-  - 修正: `/Applications/workspace/pepin/marutto-legal/app/routes/app.wizard.tsx`
+  - 新規: `app/components/wizard/CompletionScreen.tsx`
+  - 修正: `app/routes/app.wizard.tsx`
 - **検証方法**: 公開成功後にストアフロントリンクをクリックして実際のページが表示されること。レビューリンクがApp Storeページに遷移すること。
 
 ### T1-3: form_data の AES-256-GCM 暗号化
@@ -113,10 +113,10 @@
 - **工数**: 1日
 - **理由**: Specificationに「form_data内の個人情報をAES-256-GCMで暗号化保存」と明記。住所・電話番号・メールアドレスという個人情報保護法上の「個人情報」が平文保存されている。プライバシーポリシーとの整合性も確保する必要あり。
 - **対象ファイル**:
-  - 新規: `/Applications/workspace/pepin/marutto-legal/app/lib/crypto.server.ts`
-  - 修正: `/Applications/workspace/pepin/marutto-legal/app/lib/db/legalPage.server.ts`
-  - 修正: `/Applications/workspace/pepin/marutto-legal/app/routes/app.wizard.tsx`
-  - 修正: `/Applications/workspace/pepin/marutto-legal/.env.example`
+  - 新規: `app/lib/crypto.server.ts`
+  - 修正: `app/lib/db/legalPage.server.ts`
+  - 修正: `app/routes/app.wizard.tsx`
+  - 修正: `.env.example`
 - **検証方法**: DBに保存された form_data がBase64エンコードされた暗号文であること。復号後に正しいJSONが復元されること。暗号化キーを変更した場合に復号が失敗すること。
 
 ### T1-4: Shopify側ページ削除の検知
@@ -126,9 +126,9 @@
 - **工数**: 3時間
 - **理由**: `markDeletedOnShopify` 関数が実装済みだがどこからも呼ばれていない。ユーザーがShopify管理画面から手動でページを削除した場合、ダッシュボードでは「公開中」と表示され続ける。Specificationの「Shopify側でページ手動削除 → ダッシュボードで検知し再作成を促す」が未実装。
 - **対象ファイル**:
-  - 修正: `/Applications/workspace/pepin/marutto-legal/app/routes/app._index.tsx`
-  - 使用: `/Applications/workspace/pepin/marutto-legal/app/lib/db/legalPage.server.ts` (markDeletedOnShopify)
-  - 使用: `/Applications/workspace/pepin/marutto-legal/app/lib/shopify/pages.server.ts` (getPage)
+  - 修正: `app/routes/app._index.tsx`
+  - 使用: `app/lib/db/legalPage.server.ts` (markDeletedOnShopify)
+  - 使用: `app/lib/shopify/pages.server.ts` (getPage)
 - **検証方法**: Shopify管理画面でページを手動削除後、ダッシュボードリロードでステータスが「Shopify側で削除済み」に変わること
 
 ### T1-5: 楽観的ロックのバージョン同期改善
@@ -138,7 +138,7 @@
 - **工数**: 1時間
 - **理由**: 現在クライアントが `setPageVersion(prev => prev + 1)` でローカルにインクリメントしているが、auto-save と step完了save が短い間隔で連続した場合、fetcher.data の更新タイミングによってバージョンがズレる。結果として不要な 409 Conflict が返り、ユーザーに「別のセッションで更新されています」という誤った警告が出る。
 - **対象ファイル**:
-  - 修正: `/Applications/workspace/pepin/marutto-legal/app/routes/app.wizard.tsx` (action: レスポンスにversion追加、component: useEffectでserverVersionを採用)
+  - 修正: `app/routes/app.wizard.tsx` (action: レスポンスにversion追加、component: useEffectでserverVersionを採用)
 - **検証方法**: 高速で入力 → ステップ移動を繰り返しても 409 が発生しないこと
 
 ### T1-6: ウィザード離脱確認ダイアログ
@@ -148,7 +148,7 @@
 - **工数**: 1.5時間
 - **理由**: 入力途中でナビゲーションすると、3秒debounce内の最新入力が失われる。自動保存があるためデータは概ね保護されるが、直前の変更が失われることへの不安を解消する。
 - **対象ファイル**:
-  - 修正: `/Applications/workspace/pepin/marutto-legal/app/routes/app.wizard.tsx`
+  - 修正: `app/routes/app.wizard.tsx`
 - **検証方法**: 入力中にブラウザバックした際に確認ダイアログが表示されること。公開完了後にはダイアログが出ないこと。
 
 ### T1-7: GraphQL API リトライロジック
@@ -159,7 +159,7 @@
 - **工数**: 2時間
 - **理由**: Specificationに「Exponential backoffリトライ(最大3回)」と明記。現在はネットワーク障害やShopify側の一時的なエラーで即座に失敗する。本番運用では必須のレジリエンス機能。
 - **対象ファイル**:
-  - 新規または修正: `/Applications/workspace/pepin/marutto-legal/app/lib/shopify/pages.server.ts`
+  - 新規または修正: `app/lib/shopify/pages.server.ts`
 - **検証方法**: ユニットテストでリトライ動作を確認(1-2回失敗後に成功するケース)
 
 ---
