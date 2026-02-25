@@ -18,7 +18,7 @@ Shopifyストアに必要な日本の法的ページ（特定商取引法に基�
 
 | 課題 | 現状 | アプリで解決 |
 |------|------|------------|
-| 特商法ページの作成が複雑 | 15項目以上の記載義務があり、何を書くべきか分からない | 構造化フォームで質問に答えるだけで生成 |
+| 特商法ページの作成が複雑 | 14項目の法定記載義務があり、何を書くべきか分からない | 構造化フォームで質問に答えるだけで生成 |
 | Shopifyのテンプレートが不完全 | テキストエディタ＋基本テンプレートのみ。空欄が多い | フォーム入力→完全なページを自動出力 |
 | フッターへの手動リンク追加が必要 | メニュー設定で手動追加。見落としが多い | 生成と同時にフッターへ自動配置 |
 | 法改正への追従ができない | 2022年改正（最終確認画面義務化）等の対応を自力で行う必要 | 法改正時にアプリ側で更新・通知 |
@@ -60,7 +60,7 @@ Shopifyストアに必要な日本の法的ページ（特定商取引法に基�
 
 ### 2.2 特定商取引法ページの入力フィールド
 
-特定商取引法第11条に基づく15項目の必須記載事項をフォーム化する。
+特定商取引法第11条に基づく14項目の法定記載事項 + アプリ制御4フィールド（計18フィールド）をフォーム化する。
 
 | # | フィールド名 | 入力タイプ | 必須 | 備考 |
 |---|------------|----------|------|------|
@@ -120,16 +120,17 @@ Shopifyストアに必要な日本の法的ページ（特定商取引法に基�
 
 ### 3.1 全体フロー
 
+> App Store説明文の「かんたん3ステップ」と整合するため、4ステップを3ステップに統合。
+
 ```
 [アプリインストール]
     ↓
 [ダッシュボード]（生成済みページ一覧 / 未作成ページの案内）
     ↓
 [ページ生成ウィザード]
-    ├── Step 1: 事業者情報入力（名称・住所・連絡先・事業者種別）
-    ├── Step 2: 販売条件入力（支払方法・引渡時期・返品条件）
-    ├── Step 3: プレビュー確認
-    └── Step 4: 生成＆公開（ページ作成 + フッターリンク追加）
+    ├── Step 1: 事業者情報入力（名称・住所・連絡先・事業者種別・住所公開設定）
+    ├── Step 2: 販売条件入力（アコーディオンUI: 支払い / 配送 / 返品）
+    └── Step 3: プレビュー & 公開（プレビュー確認 + 生成＆公開ボタン + フッターメニュー選択）
     ↓
 [完了画面]（生成されたページへのリンク / 次のアクション提案）
 ```
@@ -138,10 +139,12 @@ Shopifyストアに必要な日本の法的ページ（特定商取引法に基�
 
 | 要素 | 内容 |
 |------|------|
-| ページ一覧 | 生成済みの法的ページをカード形式で表示。ステータス（公開/下書き）、最終更新日 |
+| **Empty State（初回）** | 未作成時にPolaris EmptyStateコンポーネントで「特商法ページを作成しましょう」とCTAボタン表示 |
+| ページ一覧 | 生成済みの法的ページをカード形式で表示。ステータス（公開/下書き/Shopify側削除済み）、最終更新日 |
 | 未作成ページ | 「プライバシーポリシーがまだ作成されていません」等のアラート |
-| コンプライアンスチェック | 簡易診断：必須項目の記入漏れがないか確認 |
-| 法改正通知 | 関連する法改正情報がある場合にバナー表示 |
+| 免責バナー | 「本アプリは法的助言を提供するものではありません」のBanner（tone=info）を常時表示 |
+| コンプライアンスチェック | 簡易診断：必須項目の記入漏れがないか確認（Phase 2） |
+| 法改正通知 | 関連する法改正情報がある場合にバナー表示（Phase 2） |
 
 ### 3.3 ウィザード画面
 
@@ -150,6 +153,25 @@ Shopifyストアに必要な日本の法的ページ（特定商取引法に基�
 - 各フィールドに**ヘルプテキスト**（「この項目は〇〇法で義務付けられています」等）
 - テンプレート文言を**ワンクリックで挿入可能**（支払方法・引渡時期等の頻出パターン）
 - 入力途中での**自動保存**（ブラウザを閉じても復元可能）
+- Step 2の販売条件は**アコーディオンUI**で分割（支払い / 配送 / 返品）
+
+**自動保存の実装方針:**
+- 保存先: サーバーサイドDB（LegalPage.form_dataカラムに中間状態保存）
+- タイミング: 各ステップ完了時 + debounce 3秒
+- 復元: loaderで既存form_data取得 → フォーム初期値として復元
+- 実装: fetcher.submitによるサーバーへの非同期保存
+
+### 3.4 バリデーション仕様
+
+| フィールド | ルール |
+|-----------|--------|
+| メールアドレス | RFC準拠 |
+| 電話番号 | 日本形式（ハイフン有無両対応: 03-1234-5678 / 0312345678） |
+| 郵便番号 | 7桁（ハイフン有無両対応: 123-4567 / 1234567）、住所自動補完 |
+| 全テキストフィールド | 最大文字数制限 |
+
+- バリデーションタイミング: ステップ遷移時（Zodスキーマによるサーバーサイドバリデーション）
+- バリデーションライブラリ: Zod
 
 ---
 
@@ -159,100 +181,138 @@ Shopifyストアに必要な日本の法的ページ（特定商取引法に基�
 
 | レイヤー | 技術 |
 |---------|------|
-| フレームワーク | Remix（Shopify CLI標準テンプレート） |
+| フレームワーク | React Router v7（Shopify CLI最新テンプレート） |
 | フロントエンド | React + Shopify Polaris |
 | バックエンド | Node.js |
-| データベース | SQLite（Prisma ORM）→ スケール時にPostgreSQL移行 |
-| ホスティング | Fly.io or Railway |
+| データベース | SQLite（Prisma ORM）+ Persistent Volume + Litestream |
+| ホスティング | Fly.io |
 | 認証 | Shopify OAuth（App Bridge統合） |
+| バリデーション | Zod |
+| テスト | Vitest |
+
+> **SQLite + Fly.ioの運用注意点:**
+> - Fly.ioではPersistent Volume（永続ボリューム）の設定が必須
+> - Litestreamによるバックアップ戦略でデータ消失リスクを軽減
+> - スケール時はPostgreSQL移行を検討
 
 ### 4.2 使用するShopify API
 
+> ※ 2025年4月以降の新規アプリはGraphQL Admin API必須。REST APIは使用しない。
+
 | API | 用途 | スコープ |
 |-----|------|---------|
-| **Pages API (REST/GraphQL)** | 法的ページの作成・更新・削除 | `write_content` |
-| **Navigation API (GraphQL)** | フッターメニューへのリンク自動追加 | `write_menus`（Admin API 2025-01以降） |
-| **Shop API** | ストア情報（名称・住所等）の自動取得 | `read_shop` ※ 要確認 |
-| **Metafields API** | アプリ設定の保存（入力データの永続化） | `write_metafields` |
-| **Billing API** | サブスクリプション課金 | （App Bridge統合） |
+| **Pages API (GraphQL Admin API)** | 法的ページの作成・更新・削除 | `write_online_store_pages` |
+| **Menu API (GraphQL Admin API)** | フッターメニューへのリンク自動追加 | `write_online_store_navigation` |
+| **Shop API (GraphQL Admin API)** | ストア情報の自動取得 | `read_online_store_pages` |
+| **Billing API** | サブスクリプション課金（Phase 2） | （App Bridge統合） |
+
+- アプリ設定の保存はアプリ自身のDB（SQLite）で行う（Metafields APIは不使用）
 
 ### 4.3 データモデル
 
+> Storeテーブルは認証情報のみ保持。事業者情報はLegalPageのform_dataに統合（Phase 2でBusinessInfoテーブルに分離を検討）。PaymentMethodテーブルはMVPでは不採用。
+
 ```
-Store（ストア情報）
+Store（ストア認証情報）
 ├── id: Shopify shop_id
-├── shop_domain: string
-├── business_name: string（販売業者名）
-├── representative_name: string（代表者名）
-├── address: string（所在地）
-├── phone: string
-├── email: string
-├── business_type: enum（corporation / individual）
-├── address_disclosure: enum（public / on_request）
+├── shop_domain: string @unique
+├── installed_at: datetime
 └── created_at / updated_at
 
 LegalPage（生成されたページ）
-├── id: auto
+├── id: auto (cuid)
 ├── store_id: FK → Store
 ├── page_type: enum（tokushoho / privacy / terms / return）
-├── shopify_page_id: string（Shopify側のページID）
-├── content_html: text（生成されたHTML）
-├── form_data: json（入力フォームのデータ。再編集用）
-├── status: enum（published / draft）
-├── version: integer（更新回数）
+├── shopify_page_id: string?（Shopify側のページGID）
+├── content_html: text?（生成されたHTML）
+├── form_data: string?（JSON。暗号化保存）
+├── form_schema_version: integer @default(1)
+├── status: enum（draft / published / deleted_on_shopify）
+├── version: integer @default(1)（楽観的ロック用）
+├── menu_item_added: boolean @default(false)
 └── created_at / updated_at
-
-PaymentMethod（支払方法）
-├── id: auto
-├── store_id: FK → Store
-├── method_name: string（クレジットカード、銀行振込等）
-├── payment_timing: string（支払時期の説明文）
-└── sort_order: integer
+@@unique([store_id, page_type])
 ```
 
 ### 4.4 ページ生成ロジック
 
 ```
-1. ユーザーがフォームに入力 → form_data としてJSON保存
-2. form_data + ページテンプレート（Handlebars等） → HTML生成
-3. Shopify Pages API で固定ページとして作成（body_html に生成HTMLを設定）
-4. Navigation API でフッターメニューに自動追加
-5. LegalPage テーブルに shopify_page_id を記録
-6. 再編集時は form_data を読み込み → フォーム復元 → 再生成 → Pages API で更新
+1. ユーザーがフォームに入力 → form_data としてJSON（暗号化）保存
+2. form_data + TypeScriptタグ付きテンプレートリテラル → HTML生成（自動XSSエスケープ）
+3. Shopify Pages API (GraphQL) で固定ページとして作成（body に生成HTMLを設定）
+4. Menu API (GraphQL) でフッターメニューに自動追加
+5. LegalPage テーブルに shopify_page_id（GID）を記録
+6. 再編集時は form_data を復号・読み込み → フォーム復元 → 再生成 → Pages API で更新
 ```
 
 ### 4.5 テンプレートエンジン
 
+**選定: TypeScriptタグ付きテンプレートリテラル**
+
+選定理由:
+- ゼロ依存（外部ライブラリ不要）
+- 自動XSSエスケープ保証（タグ関数内で全値をHTMLエスケープ）
+- 型安全（TypeScriptの型チェックが効く）
+
 特商法ページのHTMLテンプレートは以下の構造：
 
-```html
+```typescript
+// lib/sanitize.ts のhtml関数を使用
+const page = html`
 <div class="legal-page tokushoho">
   <h1>特定商取引法に基づく表記</h1>
   <table>
-    <tr>
-      <th>販売業者</th>
-      <td>{{business_name}}</td>
-    </tr>
-    <tr>
-      <th>運営責任者</th>
-      <td>{{representative_name}}</td>
-    </tr>
+    <tr><th>販売業者</th><td>${data.businessName}</td></tr>
+    <tr><th>運営責任者</th><td>${data.representativeName}</td></tr>
     <tr>
       <th>所在地</th>
-      <td>
-        {{#if address_public}}
-          〒{{postal_code}} {{address}}
-        {{else}}
-          請求があった場合、遅滞なく開示いたします。
-        {{/if}}
-      </td>
+      <td>${data.addressDisclosure === "public"
+        ? `〒${data.postalCode} ${data.address}`
+        : "請求があった場合、遅滞なく開示いたします。"
+      }</td>
     </tr>
-    <!-- ... 以下、全15項目 -->
+    <!-- ... 以下、全18フィールド -->
   </table>
 </div>
+`;
 ```
 
-CSSはインラインスタイルとして埋め込み（テーマに依存しない表示を保証）。
+CSSは最小限のインラインスタイルとして埋め込み（テーマ追従を基本としつつ、テーブル等の基本スタイルのみ指定）。
+
+### 4.6 セキュリティ仕様
+
+| 項目 | 仕様 |
+|------|------|
+| **通信暗号化** | HTTPS必須（Fly.io標準対応） |
+| **データ暗号化** | form_data内の個人情報をAES-256-GCMで暗号化保存 |
+| **入力サニタイゼーション** | 全ユーザー入力をHTMLエスケープ。タグ付きテンプレートリテラルで自動エスケープ保証 |
+| **認証・セッション** | Shopify App Bridge + OAuthセッション管理（テンプレート標準） |
+| **CSRF保護** | Remix/React Routerのフォーム送信機構による自動保護 |
+| **XSS対策** | タグ付きテンプレートリテラルによる自動エスケープ + Shopify側のHTML制限で多層防御 |
+| **GDPR対応** | Mandatory webhooks実装（customers/data_request, customers/redact, shop/redact） |
+| **データ保持ポリシー** | アンインストール後48時間以内にDB内データ削除。Shopify側のページは残す |
+| **バックアップ** | SQLite: Litestreamによるリアルタイムレプリケーション |
+
+### 4.7 エラーハンドリング・エッジケース
+
+| ケース | 対応 |
+|--------|------|
+| Shopify側でページ手動削除 | ダッシュボードで検知し、再作成を促すUIを表示 |
+| フッターメニュー追加失敗 | 手動でメニューに追加する手順ガイドをフォールバック表示 |
+| メニューハンドル特定 | Menu APIで全メニュー取得し、handle="footer"を候補提示。ユーザーが対象メニューを選択/確認 |
+| メニューリンク重複 | 追加前に既存アイテムをチェックし、重複を防止 |
+| 同時編集 | 楽観的ロック（LegalPage.versionカラム）で競合を検出し、再読み込みを促す |
+| APIレート制限 | Exponential backoffリトライ（最大3回） |
+| アンインストール | shop/redact webhookでDBデータ削除。Shopify側のページはそのまま残す |
+
+### 4.8 テスト戦略
+
+| レイヤー | 対象 | ツール |
+|---------|------|--------|
+| 単体テスト | テンプレートHTML生成、バリデーション、サニタイゼーション | Vitest |
+| 統合テスト | Shopify API連携（モック）、DB操作 | Vitest + MSW |
+| E2Eテスト | ウィザードフロー、ページ生成 | 手動テスト（MVPではPlaywright省略） |
+| App Store審査 | 開発ストアでの動作確認 | Shopify Partners |
 
 ---
 
@@ -303,16 +363,31 @@ CSSはインラインスタイルとして埋め込み（テーマに依存し�
 
 **MVPの機能スコープ:**
 - ✅ 特商法ページの生成（1ページ）
-- ✅ 構造化フォーム入力（15項目）
+- ✅ 構造化フォーム入力（18フィールド: 法定14項目 + アプリ制御4フィールド）
 - ✅ テンプレート文言のワンクリック挿入
 - ✅ 住所非公開オプション
-- ✅ フッターメニューへの自動リンク追加
+- ✅ フッターメニューへの自動リンク追加（ユーザーがメニューを選択）
 - ✅ プレビュー機能
 - ✅ ページの再編集・更新
+- ✅ 自動保存（ステップ完了時 + debounce 3秒）
+- ✅ GDPR mandatory webhooks（customers/data_request, customers/redact, shop/redact）
+- ✅ 免責バナー表示（「法的助言ではない」旨の表示）
 - ❌ プライバシーポリシー（Phase 2）
 - ❌ 利用規約・返品ポリシー（Phase 2）
 - ❌ 英語版生成（Phase 3）
 - ❌ 課金（Phase 2。MVPは全機能無料で公開してレビュー獲得を優先）
+
+**MVPリリースチェックリスト:**
+- [ ] 全18フィールドの入力・生成・表示テスト
+- [ ] XSSエスケープ確認テスト
+- [ ] GDPR mandatory webhooks動作確認
+- [ ] 住所非公開設定の表示確認
+- [ ] フッターメニュー追加（既存リンク保持確認）
+- [ ] 自動保存・復元テスト
+- [ ] 開発ストアでの全フローE2Eテスト
+- [ ] App Store申請用スクリーンショット撮影
+- [ ] プライバシーポリシーURL準備
+- [ ] アプリ利用規約準備
 
 ### Phase 2: 有料プラン＋追加ページ（Phase 1完了後 1〜2ヶ月）
 
@@ -345,7 +420,7 @@ CSSはインラインスタイルとして埋め込み（テーマに依存し�
 まるっと法務ページは、フォームに入力するだけで特商法ページを自動生成し、
 フッターへの配置まで自動で完了するアプリです。
 
-✅ 特商法に必要な15項目を構造化フォームでガイド
+✅ 特商法に必要な項目を構造化フォームでガイド
 ✅ テンプレート文言をワンクリックで挿入
 ✅ 個人事業主の住所非公開設定に対応
 ✅ フッターメニューへの自動リンク追加
@@ -402,8 +477,12 @@ tokushoho, legal page generator
 |--------|--------|------|
 | Shopifyが日本向けビルトイン機能を強化 | 高 | 先行者利益（レビュー・インストール数の蓄積）で防御。Liquidオブジェクトの不在が何年も放置されている実態を見ると、短期的な脅威は低い |
 | 法改正への追従コスト | 中 | テンプレートベースの設計により、テンプレート更新のみで対応可能。弁護士監修は必須ではないが将来的に検討 |
-| 生成されたページの法的正確性に関するクレーム | 中 | 免責事項を明記（「本アプリは法的助言を提供するものではありません」）。テンプレートは消費者庁ガイドラインに準拠 |
-| Pages APIの仕様変更 | 低 | 安定したAPIを使用。GraphQL Admin APIへの段階的移行 |
+| 生成されたページの法的正確性に関するクレーム | 中 | 免責事項を明記（アプリ内Banner + ページフッター + アプリ利用規約の3層）。テンプレートは消費者庁ガイドラインに準拠 |
+| 弁護士法72条（非弁行為）リスク | 中 | 本アプリはテンプレート提供であり、個別の法的助言は行わない旨を明確化。免責事項を徹底表示 |
+| XSS攻撃リスク | 中 | タグ付きテンプレートリテラルによる自動エスケープ + Shopify側のHTML制限で多層防御 |
+| データ漏洩リスク | 中 | form_data暗号化保存（AES-256-GCM）、HTTPS通信、GDPR対応 |
+| SQLiteデータ消失リスク | 中 | Litestreamによるリアルタイムバックアップ、Persistent Volume使用 |
+| Pages APIの仕様変更 | 低 | GraphQL Admin APIのみ使用（REST API非依存） |
 | 競合アプリの参入 | 中 | レビュー数と「まるっと」ブランドでの差別化。ランキングアプリとのクロスセルで顧客基盤を固める |
 
 ---
