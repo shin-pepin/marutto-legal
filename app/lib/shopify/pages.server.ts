@@ -1,4 +1,5 @@
 import type { AdminApiContext } from "@shopify/shopify-app-remix/server";
+import { withRetry } from "./retry.server";
 
 interface CreatePageInput {
   title: string;
@@ -19,6 +20,7 @@ export async function createPage(
   admin: AdminApiContext,
   input: CreatePageInput,
 ): Promise<CreatePageResult> {
+  return withRetry(async () => {
   const response = await admin.graphql(
     `#graphql
     mutation pageCreate($page: PageCreateInput!) {
@@ -62,6 +64,7 @@ export async function createPage(
     pageId: result.page.id,
     handle: result.page.handle,
   };
+  });
 }
 
 /**
@@ -72,6 +75,7 @@ export async function updatePage(
   pageId: string,
   input: { title?: string; bodyHtml?: string; published?: boolean },
 ) {
+  return withRetry(async () => {
   const page: Record<string, unknown> = {};
   if (input.title !== undefined) page.title = input.title;
   if (input.bodyHtml !== undefined) page.body = input.bodyHtml;
@@ -106,12 +110,14 @@ export async function updatePage(
   }
 
   return result?.page;
+  });
 }
 
 /**
  * Check if a page still exists on Shopify.
  */
 export async function getPage(admin: AdminApiContext, pageId: string) {
+  return withRetry(async () => {
   const response = await admin.graphql(
     `#graphql
     query getPage($id: ID!) {
@@ -127,6 +133,7 @@ export async function getPage(admin: AdminApiContext, pageId: string) {
 
   const json = await response.json();
   return json.data?.page ?? null;
+  });
 }
 
 export class ShopifyApiError extends Error {

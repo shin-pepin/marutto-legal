@@ -12,8 +12,9 @@ import {
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { ensureStore } from "../lib/db/store.server";
-import { getLegalPages } from "../lib/db/legalPage.server";
+import { getLegalPages, markDeletedOnShopify } from "../lib/db/legalPage.server";
 import { PageCard } from "../components/dashboard/PageCard";
+import { withRetry } from "../lib/shopify/retry.server";
 
 // Phase 2以降で privacy, terms, return のウィザードを追加予定
 const PAGE_TYPE_LABELS: Record<string, string> = {
@@ -24,11 +25,66 @@ const PAGE_TYPE_LABELS: Record<string, string> = {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
   const shop = session.shop;
 
   await ensureStore(shop);
   const pages = await getLegalPages(shop);
+
+  // T1-4: Check if published pages still exist on Shopify
+  const pagesWithShopifyId = pages.filter(
+    (p) => p.shopifyPageId && p.status === "published",
+  );
+
+  if (pagesWithShopifyId.length > 0) {
+    try {
+      // Bulk check using nodes query (single request for all pages)
+      const ids = pagesWithShopifyId.map((p) => p.shopifyPageId!);
+      const response = await withRetry(() =>
+        admin.graphql(
+          `#graphql
+          query checkPages($ids: [ID!]!) {
+            nodes(ids: $ids) {
+              ... on Page {
+                id
+              }
+            }
+          }`,
+          { variables: { ids } },
+        ),
+      );
+
+      const result = await response.json();
+      const existingIds = new Set(
+        (result.data?.nodes ?? [])
+          .filter((n: { id?: string } | null) => n?.id)
+          .map((n: { id: string }) => n.id),
+      );
+
+      // Mark pages that no longer exist on Shopify
+      const deletedPages = pagesWithShopifyId.filter(
+        (p) => !existingIds.has(p.shopifyPageId!),
+      );
+
+      await Promise.all(
+        deletedPages.map((p) => markDeletedOnShopify(p.id)),
+      );
+
+      // Update local data to reflect changes
+      for (const dp of deletedPages) {
+        const idx = pages.findIndex((p) => p.id === dp.id);
+        if (idx !== -1) {
+          pages[idx] = {
+            ...pages[idx],
+            status: "deleted_on_shopify",
+            shopifyPageId: null,
+          };
+        }
+      }
+    } catch {
+      // Non-critical: if the check fails, we still show the dashboard
+    }
+  }
 
   return json({ pages, shop });
 };
