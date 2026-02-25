@@ -1,5 +1,5 @@
 import type { AdminApiContext } from "@shopify/shopify-app-remix/server";
-import { withRetry } from "./retry.server";
+import { withRetry, hasRetryableGraphQLError } from "./retry.server";
 import { ShopifyApiError } from "./pages.server";
 
 interface MenuItem {
@@ -43,6 +43,11 @@ export async function getMenus(admin: AdminApiContext): Promise<Menu[]> {
     );
 
     const json = await response.json();
+
+    if (hasRetryableGraphQLError(json)) {
+      throw new Error("Throttled: GraphQL API rate limited");
+    }
+
     const nodes = json.data?.menus?.nodes ?? [];
 
     return nodes.map((menu: {
@@ -99,6 +104,11 @@ export async function addPageToMenu(
     );
 
     const menuJson = await menuResponse.json();
+
+    if (hasRetryableGraphQLError(menuJson)) {
+      throw new Error("Throttled: GraphQL API rate limited");
+    }
+
     const existingItems = menuJson.data?.menu?.items ?? [];
 
     // Check for duplicates
@@ -145,6 +155,11 @@ export async function addPageToMenu(
     );
 
     const json = await response.json();
+
+    if (hasRetryableGraphQLError(json)) {
+      throw new Error("Throttled: GraphQL API rate limited");
+    }
+
     const result = json.data?.menuUpdate;
 
     if (result?.userErrors?.length) {
