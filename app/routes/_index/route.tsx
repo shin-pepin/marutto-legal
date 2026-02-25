@@ -23,7 +23,7 @@ export default function App() {
     <div className={styles.index}>
       <div className={styles.content}>
         <h1 className={styles.heading}>
-          まるっと法務ページ
+          まるっと法務作成
         </h1>
         <p className={styles.text}>
           Shopifyストアに必要な特商法ページを、フォーム入力だけで自動生成。フッターへの配置まで自動で完了します。

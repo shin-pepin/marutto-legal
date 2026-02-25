@@ -1,4 +1,4 @@
-# まるっと法務ページ — MVP実装 Todo
+# まるっと法務作成 — MVP実装 Todo
 
 ## Part 1: Specification.md 修正
 - [x] C-1: APIスコープ名・API種別の修正

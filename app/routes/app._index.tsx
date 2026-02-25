@@ -41,7 +41,7 @@ export default function DashboardPage() {
 
   return (
     <Page>
-      <TitleBar title="まるっと法務ページ" />
+      <TitleBar title="まるっと法務作成" />
       <Layout>
         <Layout.Section>
           <BlockStack gap="400">

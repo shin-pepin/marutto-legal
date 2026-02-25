@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "515fe16160eca91ac5ae45f3a35bd735"
-name = "まるっと法務ページ"
+name = "まるっと法務作成"
 application_url = "https://example.com"
 embedded = true
 
