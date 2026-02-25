@@ -14,7 +14,7 @@ import { authenticate } from "../shopify.server";
 import { ensureStore } from "../lib/db/store.server";
 import { getLegalPages, markDeletedOnShopify } from "../lib/db/legalPage.server";
 import { PageCard } from "../components/dashboard/PageCard";
-import { withRetry } from "../lib/shopify/retry.server";
+import { withRetry, hasRetryableGraphQLError } from "../lib/shopify/retry.server";
 
 // Phase 2以降で privacy, terms, return のウィザードを追加予定
 const PAGE_TYPE_LABELS: Record<string, string> = {
@@ -40,8 +40,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     try {
       // Bulk check using nodes query (single request for all pages)
       const ids = pagesWithShopifyId.map((p) => p.shopifyPageId!);
-      const response = await withRetry(() =>
-        admin.graphql(
+      const result = await withRetry(async () => {
+        const response = await admin.graphql(
           `#graphql
           query checkPages($ids: [ID!]!) {
             nodes(ids: $ids) {
@@ -51,10 +51,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             }
           }`,
           { variables: { ids } },
-        ),
-      );
-
-      const result = await response.json();
+        );
+        const json = await response.json();
+        if (hasRetryableGraphQLError(json)) {
+          throw new Error("Throttled: GraphQL API rate limited");
+        }
+        return json;
+      });
       const existingIds = new Set(
         (result.data?.nodes ?? [])
           .filter((n: { id?: string } | null) => n?.id)
