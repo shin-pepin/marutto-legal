@@ -23,6 +23,7 @@ import {
   getLegalPage,
   upsertLegalPageDraft,
   publishLegalPage,
+  OptimisticLockError,
 } from "../lib/db/legalPage.server";
 import { createPage, updatePage, getPage } from "../lib/shopify/pages.server";
 import type { TokushohoFormData } from "../types/wizard";
@@ -71,7 +72,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (formDataJson && formDataJson.length > MAX_FORM_DATA_SIZE) {
       return json({ success: false, intent: "save-draft", error: "Form data too large" }, { status: 400 });
     }
-    await upsertLegalPageDraft(shop, "tokushoho", formDataJson);
+    const versionStr = formPayload.get("version") as string | null;
+    const expectedVersion = versionStr ? parseInt(versionStr, 10) : undefined;
+    try {
+      await upsertLegalPageDraft(shop, "tokushoho", formDataJson, expectedVersion);
+    } catch (error) {
+      if (error instanceof OptimisticLockError) {
+        return json({ success: false, intent: "save-draft", error: error.message }, { status: 409 });
+      }
+      throw error;
+    }
     return json({ success: true, intent: "save-draft" });
   }
 
@@ -174,6 +184,11 @@ export default function WizardPage() {
     returns: true,
   });
   const [publishSuccess, setPublishSuccess] = useState(false);
+  const [pageVersion, setPageVersion] = useState<number | undefined>(
+    existingPage?.version,
+  );
+  const pageVersionRef = useRef(pageVersion);
+  pageVersionRef.current = pageVersion;
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const isPublishing =
@@ -190,6 +205,9 @@ export default function WizardPage() {
         const fd = new FormData();
         fd.append("intent", "save-draft");
         fd.append("formData", JSON.stringify(data));
+        if (pageVersionRef.current !== undefined) {
+          fd.append("version", String(pageVersionRef.current));
+        }
         fetcherRef.current.submit(fd, { method: "POST" });
       }, 3000);
     },
@@ -240,10 +258,13 @@ export default function WizardPage() {
     const fd = new FormData();
     fd.append("intent", "save-draft");
     fd.append("formData", JSON.stringify(formData));
+    if (pageVersion !== undefined) {
+      fd.append("version", String(pageVersion));
+    }
     fetcher.submit(fd, { method: "POST" });
 
     setCurrentStep((prev) => Math.min(prev + 1, 3));
-  }, [currentStep, formData, fetcher]);
+  }, [currentStep, formData, fetcher, pageVersion]);
 
   const handleBack = useCallback(() => {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
@@ -253,13 +274,20 @@ export default function WizardPage() {
     const fd = new FormData();
     fd.append("intent", "publish");
     fd.append("formData", JSON.stringify(formData));
+    if (pageVersion !== undefined) {
+      fd.append("version", String(pageVersion));
+    }
     fetcher.submit(fd, { method: "POST" });
-  }, [formData, fetcher]);
+  }, [formData, fetcher, pageVersion]);
 
-  // Handle publish result
+  // Handle action results
   useEffect(() => {
-    if (fetcher.data && fetcher.data.intent === "publish" && fetcher.data.success) {
-      setPublishSuccess(true);
+    if (fetcher.data?.success) {
+      // Increment local version on successful save
+      setPageVersion((prev) => (prev !== undefined ? prev + 1 : 1));
+      if (fetcher.data.intent === "publish") {
+        setPublishSuccess(true);
+      }
     }
   }, [fetcher.data]);
 

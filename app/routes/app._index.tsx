@@ -15,6 +15,7 @@ import { ensureStore } from "../lib/db/store.server";
 import { getLegalPages } from "../lib/db/legalPage.server";
 import { PageCard } from "../components/dashboard/PageCard";
 
+// Phase 2以降で privacy, terms, return のウィザードを追加予定
 const PAGE_TYPE_LABELS: Record<string, string> = {
   tokushoho: "特定商取引法に基づく表記",
   privacy: "プライバシーポリシー",

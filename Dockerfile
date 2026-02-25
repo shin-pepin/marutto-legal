@@ -5,7 +5,6 @@ COPY package.json package-lock.json* ./
 RUN npm ci && npm cache clean --force
 COPY . .
 RUN npm run build
-RUN npm remove @shopify/cli
 
 FROM node:18-alpine
 RUN apk add --no-cache openssl

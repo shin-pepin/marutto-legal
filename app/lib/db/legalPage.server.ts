@@ -29,7 +29,7 @@ export async function getLegalPages(storeId: string) {
 export async function upsertLegalPageDraft(
   storeId: string,
   pageType: PageType,
-  formData: string, // encrypted JSON
+  formData: string,
   expectedVersion?: number,
 ) {
   const existing = await getLegalPage(storeId, pageType);
