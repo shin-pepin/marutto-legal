@@ -1,0 +1,10 @@
+node_modules/
+build/
+.cache/
+prisma/dev.sqlite
+prisma/dev.sqlite-journal
+.env
+.shopify/
+dist/
+*.tsbuildinfo
+node_modules
