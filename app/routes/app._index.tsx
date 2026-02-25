@@ -29,7 +29,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shop = session.shop;
 
   await ensureStore(shop);
-  const pages = await getLegalPages(shop);
+  let pages = await getLegalPages(shop);
 
   // T1-4: Check if published pages still exist on Shopify
   const pagesWithShopifyId = pages.filter(
@@ -70,17 +70,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         deletedPages.map((p) => markDeletedOnShopify(p.id)),
       );
 
-      // Update local data to reflect changes
-      for (const dp of deletedPages) {
-        const idx = pages.findIndex((p) => p.id === dp.id);
-        if (idx !== -1) {
-          pages[idx] = {
-            ...pages[idx],
-            status: "deleted_on_shopify",
-            shopifyPageId: null,
-          };
-        }
-      }
+      // Update local data to reflect changes (immutable)
+      const deletedIds = new Set(deletedPages.map((p) => p.id));
+      pages = pages.map((p) =>
+        deletedIds.has(p.id)
+          ? { ...p, status: "deleted_on_shopify" as const, shopifyPageId: null }
+          : p,
+      );
     } catch {
       // Non-critical: if the check fails, we still show the dashboard
     }

@@ -47,7 +47,7 @@ export async function upsertLegalPageDraft(
 ) {
   const existing = await getLegalPage(storeId, pageType);
 
-  const encryptedFormData = formData ? encryptFormData(formData) : formData;
+  const encryptedFormData = formData != null ? encryptFormData(formData) : formData;
 
   if (existing) {
     // Optimistic lock check (read raw version from DB, not decrypted copy)

@@ -395,7 +395,6 @@ export default function WizardPage() {
                 shopifyPageId={publishResult?.shopifyPageId}
                 pageHandle={publishResult?.pageHandle}
                 menuAdded={publishResult?.menuAdded}
-                menus={menus}
                 shop={shop}
               />
             ) : (

@@ -11,18 +11,11 @@ import {
 } from "@shopify/polaris";
 import { CheckCircleIcon } from "@shopify/polaris-icons";
 
-interface MenuOption {
-  id: string;
-  title: string;
-  handle: string;
-}
-
 interface CompletionScreenProps {
   isUpdate: boolean;
   shopifyPageId?: string;
   pageHandle?: string;
   menuAdded?: boolean;
-  menus: MenuOption[];
   shop: string;
 }
 
