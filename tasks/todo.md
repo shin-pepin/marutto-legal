@@ -39,9 +39,8 @@
 - **検証**: スコープが `write_online_store_pages,read_online_store_pages` のみであること確認済み
 
 ### T0-5: アプリのプライバシーポリシー作成 ✅
-- [x] `app/routes/privacy-policy.tsx` を新規作成（Shopify認証不要のpublicページ）
-- [x] 収集データ、使用目的、保存方法、保持期間、GDPR対応、第三者提供、連絡先を全て記載
-- [ ] Shopify Partner Dashboardにプライバシーポリシー URLを設定（手動作業）
+- [x] 外部HP上のプライバシーポリシーを使用: https://pepin.studio/privacy
+- [ ] Shopify Partner Dashboardに上記URLを設定（手動作業）
 
 ### T0-6: App Listing 素材の準備 ✅(テキスト部分)
 - [x] `docs/app-listing.md` にテキスト素材ドラフト作成（紹介文、詳細説明、機能リスト、検索キーワード）
