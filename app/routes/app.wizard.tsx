@@ -64,15 +64,28 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formPayload = await request.formData();
   const intent = formPayload.get("intent") as string;
 
+  const MAX_FORM_DATA_SIZE = 100_000; // 100KB
+
   if (intent === "save-draft") {
     const formDataJson = formPayload.get("formData") as string;
+    if (formDataJson && formDataJson.length > MAX_FORM_DATA_SIZE) {
+      return json({ success: false, intent: "save-draft", error: "Form data too large" }, { status: 400 });
+    }
     await upsertLegalPageDraft(shop, "tokushoho", formDataJson);
     return json({ success: true, intent: "save-draft" });
   }
 
   if (intent === "publish") {
     const formDataJson = formPayload.get("formData") as string;
-    const formData = JSON.parse(formDataJson);
+    if (formDataJson && formDataJson.length > MAX_FORM_DATA_SIZE) {
+      return json({ success: false, intent: "publish", error: "Form data too large" }, { status: 400 });
+    }
+    let formData: unknown;
+    try {
+      formData = JSON.parse(formDataJson);
+    } catch {
+      return json({ success: false, intent: "publish", error: "Invalid form data" }, { status: 400 });
+    }
 
     // Validate full form
     const validation = tokushohoFormSchema.safeParse(formData);
@@ -120,8 +133,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Create new page
       const result = await createPage(admin, {
         title: "特定商取引法に基づく表記",
+        handle: "legal",
         bodyHtml: contentHtml,
-        published: true,
+        published: false,
       });
       shopifyPageId = result.pageId;
     }
@@ -148,6 +162,8 @@ export default function WizardPage() {
     useLoaderData<typeof loader>();
 
   const fetcher = useFetcher<typeof action>();
+  const fetcherRef = useRef(fetcher);
+  fetcherRef.current = fetcher;
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] =
     useState<Partial<TokushohoFormData>>(initialFormData);
@@ -174,10 +190,10 @@ export default function WizardPage() {
         const fd = new FormData();
         fd.append("intent", "save-draft");
         fd.append("formData", JSON.stringify(data));
-        fetcher.submit(fd, { method: "POST" });
+        fetcherRef.current.submit(fd, { method: "POST" });
       }, 3000);
     },
-    [fetcher],
+    [],
   );
 
   const handleFieldChange = useCallback(

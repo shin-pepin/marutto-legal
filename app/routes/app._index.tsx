@@ -60,7 +60,7 @@ export default function DashboardPage() {
                 image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
               >
                 <p>
-                  フォームに入力するだけで、特定商取引法に基づく表記ページを自動生成し、フッターメニューへの配置まで自動で完了します。
+                  フォームに入力するだけで、特定商取引法に基づく表記ページを自動生成できます。
                 </p>
               </EmptyState>
             ) : (

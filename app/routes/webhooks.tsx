@@ -41,6 +41,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         console.log(`[GDPR] Successfully deleted data for ${shop}`);
       } catch (error) {
         console.error(`[GDPR] Failed to delete data for ${shop}:`, error);
+        throw error;
       }
       break;
     }

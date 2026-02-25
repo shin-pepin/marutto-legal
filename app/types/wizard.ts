@@ -3,42 +3,8 @@ export type AddressDisclosure = "public" | "on_request";
 export type PageType = "tokushoho" | "privacy" | "terms" | "return";
 export type PageStatus = "draft" | "published" | "deleted_on_shopify";
 
-export interface TokushohoFormData {
-  // Step 1: Business Info
-  businessName: string;
-  representativeName: string;
-  postalCode: string;
-  address: string;
-  phone: string;
-  email: string;
-  businessType: BusinessType;
-  addressDisclosure: AddressDisclosure;
-
-  // Step 2: Sales Conditions - Payment
-  sellingPrice: string;
-  additionalFees: string;
-  paymentMethods: string[];
-  paymentTiming: string;
-
-  // Step 2: Sales Conditions - Delivery
-  deliveryTime: string;
-  deliveryNotes: string;
-
-  // Step 2: Sales Conditions - Returns
-  returnPolicy: string;
-  returnDeadline: string;
-  returnShippingCost: string;
-  defectiveItemPolicy: string;
-
-  // Optional
-  quantityLimit: string;
-}
-
-export interface WizardState {
-  currentStep: number;
-  formData: Partial<TokushohoFormData>;
-  isDirty: boolean;
-}
+// TokushohoFormData is derived from the Zod schema in lib/validation/wizard.ts
+export type { TokushohoFormData } from "../lib/validation/wizard";
 
 export const PAYMENT_METHODS = [
   { value: "credit_card", label: "クレジットカード" },

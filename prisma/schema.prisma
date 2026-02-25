@@ -43,7 +43,7 @@ model LegalPage {
   pageType          String   // tokushoho, privacy, terms, return
   shopifyPageId     String?  // Shopify GID (e.g. gid://shopify/Page/123)
   contentHtml       String?
-  formData          String?  // Encrypted JSON
+  formData          String?  // JSON
   formSchemaVersion Int      @default(1)
   status            String   @default("draft") // draft, published, deleted_on_shopify
   version           Int      @default(1) // Optimistic locking
