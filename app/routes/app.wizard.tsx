@@ -248,6 +248,10 @@ export default function WizardPage() {
   }, []);
 
   const handleNext = useCallback(() => {
+    // Cancel pending auto-save to avoid stale version conflict
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
     const validation = validateStep(currentStep, formData);
     if (!validation.success) {
       const fieldErrors: Record<string, string> = {};
@@ -340,11 +344,15 @@ export default function WizardPage() {
               <>
                 {fetcher.data?.intent === "publish" &&
                   !fetcher.data.success &&
-                  (fetcher.data as Record<string, unknown>).errors && (
+                  ((fetcher.data as Record<string, unknown>).errors ? (
                     <Banner tone="critical">
                       <p>入力内容にエラーがあります。修正してください。</p>
                     </Banner>
-                  )}
+                  ) : (fetcher.data as Record<string, unknown>).error ? (
+                    <Banner tone="critical">
+                      <p>{String((fetcher.data as Record<string, unknown>).error)}</p>
+                    </Banner>
+                  ) : null)}
 
                 {currentStep === 1 && (
                   <Step1BusinessInfo
