@@ -19,52 +19,54 @@ interface WizardStepperProps {
 export function WizardStepper({ currentStep }: WizardStepperProps) {
   return (
     <Box paddingBlockEnd="400">
-      <InlineStack gap="400" align="center">
-        {STEPS.map((step, index) => {
-          const stepNumber = index + 1;
-          const isActive = stepNumber === currentStep;
-          const isCompleted = stepNumber < currentStep;
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <InlineStack gap="300" blockAlign="center">
+          {STEPS.map((step, index) => {
+            const stepNumber = index + 1;
+            const isActive = stepNumber === currentStep;
+            const isCompleted = stepNumber < currentStep;
 
-          return (
-            <InlineStack key={stepNumber} gap="200" align="center">
-              {isCompleted ? (
-                <Icon source={CheckCircleIcon} tone="success" />
-              ) : (
-                <Box
-                  background={isActive ? "bg-fill-info" : "bg-fill-secondary"}
-                  borderRadius="full"
-                  padding="100"
-                  minWidth="24px"
-                  minHeight="24px"
-                >
-                  <Text
-                    as="span"
-                    variant="bodySm"
-                    fontWeight="bold"
-                    tone={isActive ? "text-inverse" : "subdued"}
-                    alignment="center"
+            return (
+              <InlineStack key={stepNumber} gap="200" blockAlign="center">
+                {isCompleted ? (
+                  <Icon source={CheckCircleIcon} tone="success" />
+                ) : (
+                  <Box
+                    background={isActive ? "bg-fill-info" : "bg-fill-secondary"}
+                    borderRadius="full"
+                    padding="100"
+                    minWidth="24px"
+                    minHeight="24px"
                   >
-                    {stepNumber}
-                  </Text>
-                </Box>
-              )}
-              <Text
-                as="span"
-                variant="bodySm"
-                fontWeight={isActive ? "bold" : "regular"}
-                tone={isActive ? undefined : "subdued"}
-              >
-                {step.description}
-              </Text>
-              {index < STEPS.length - 1 && (
-                <Text as="span" tone="subdued">
-                  →
+                    <Text
+                      as="span"
+                      variant="bodySm"
+                      fontWeight="bold"
+                      tone={isActive ? "text-inverse" : "subdued"}
+                      alignment="center"
+                    >
+                      {stepNumber}
+                    </Text>
+                  </Box>
+                )}
+                <Text
+                  as="span"
+                  variant="bodySm"
+                  fontWeight={isActive ? "bold" : "regular"}
+                  tone={isActive ? undefined : "subdued"}
+                >
+                  {step.description}
                 </Text>
-              )}
-            </InlineStack>
-          );
-        })}
-      </InlineStack>
+                {index < STEPS.length - 1 && (
+                  <Text as="span" tone="subdued">
+                    →
+                  </Text>
+                )}
+              </InlineStack>
+            );
+          })}
+        </InlineStack>
+      </div>
     </Box>
   );
 }

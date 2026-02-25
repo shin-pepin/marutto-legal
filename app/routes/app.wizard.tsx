@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, useFetcher } from "@remix-run/react";
+import { useLoaderData, useFetcher, useBlocker } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -9,6 +9,8 @@ import {
   Button,
   InlineStack,
   Banner,
+  Modal,
+  Text,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -16,6 +18,7 @@ import { WizardStepper } from "../components/wizard/WizardStepper";
 import { Step1BusinessInfo } from "../components/wizard/Step1BusinessInfo";
 import { Step2SalesConditions } from "../components/wizard/Step2SalesConditions";
 import { Step3PreviewPublish } from "../components/wizard/Step3PreviewPublish";
+import { CompletionScreen } from "../components/wizard/CompletionScreen";
 import { validateStep, tokushohoFormSchema, normalizePostalCode } from "../lib/validation/wizard";
 import { generateTokushohoHtml } from "../lib/templates/tokushoho";
 import { ensureStore } from "../lib/db/store.server";
@@ -29,12 +32,11 @@ import { createPage, updatePage, getPage } from "../lib/shopify/pages.server";
 import type { TokushohoFormData } from "../types/wizard";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
   const shop = session.shop;
 
   await ensureStore(shop);
 
-  // Load existing form data if any
   const existingPage = await getLegalPage(shop, "tokushoho");
 
   let formData: Partial<TokushohoFormData> = {};
@@ -56,6 +58,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           version: existingPage.version,
         }
       : null,
+    shop,
   });
 };
 
@@ -75,14 +78,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const versionStr = formPayload.get("version") as string | null;
     const expectedVersion = versionStr ? parseInt(versionStr, 10) : undefined;
     try {
-      await upsertLegalPageDraft(shop, "tokushoho", formDataJson, expectedVersion);
+      const updated = await upsertLegalPageDraft(shop, "tokushoho", formDataJson, expectedVersion);
+      return json({ success: true, intent: "save-draft", newVersion: updated.version });
     } catch (error) {
       if (error instanceof OptimisticLockError) {
         return json({ success: false, intent: "save-draft", error: error.message }, { status: 409 });
       }
       throw error;
     }
-    return json({ success: true, intent: "save-draft" });
   }
 
   if (intent === "publish") {
@@ -119,6 +122,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Check if we're updating or creating
     const existingPage = await getLegalPage(shop, "tokushoho");
     let shopifyPageId: string;
+    let pageHandle: string | undefined;
 
     if (existingPage?.shopifyPageId) {
       // Check if page still exists on Shopify
@@ -129,6 +133,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           bodyHtml: contentHtml,
         });
         shopifyPageId = existingPage.shopifyPageId;
+        pageHandle = page.handle;
       } else {
         // Page was deleted on Shopify, create new
         const result = await createPage(admin, {
@@ -138,6 +143,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           published: false,
         });
         shopifyPageId = result.pageId;
+        pageHandle = result.handle;
       }
     } else {
       // Create new page
@@ -148,36 +154,38 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         published: false,
       });
       shopifyPageId = result.pageId;
+      pageHandle = result.handle;
     }
 
     // Save to DB with optimistic lock
     const versionStr = formPayload.get("version") as string | null;
     const expectedVersion = versionStr ? parseInt(versionStr, 10) : undefined;
     try {
-      await publishLegalPage(shop, "tokushoho", {
+      const published = await publishLegalPage(shop, "tokushoho", {
         shopifyPageId,
         contentHtml,
         formData: formDataJson,
       }, expectedVersion);
+      return json({
+        success: true,
+        intent: "publish",
+        shopifyPageId,
+        pageHandle,
+        newVersion: published.version,
+      });
     } catch (error) {
       if (error instanceof OptimisticLockError) {
         return json({ success: false, intent: "publish", error: error.message }, { status: 409 });
       }
       throw error;
     }
-
-    return json({
-      success: true,
-      intent: "publish",
-      shopifyPageId,
-    });
   }
 
   return json({ success: false, intent: "unknown" });
 };
 
 export default function WizardPage() {
-  const { formData: initialFormData, existingPage } =
+  const { formData: initialFormData, existingPage, shop } =
     useLoaderData<typeof loader>();
 
   const fetcher = useFetcher<typeof action>();
@@ -193,16 +201,24 @@ export default function WizardPage() {
     returns: true,
   });
   const [publishSuccess, setPublishSuccess] = useState(false);
+  const [publishResult, setPublishResult] = useState<{
+    shopifyPageId?: string;
+    pageHandle?: string;
+  } | null>(null);
   const [pageVersion, setPageVersion] = useState<number | undefined>(
     existingPage?.version,
   );
   const pageVersionRef = useRef(pageVersion);
   pageVersionRef.current = pageVersion;
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
+  const [isDirty, setIsDirty] = useState(false);
 
   const isPublishing =
     fetcher.state !== "idle" &&
     fetcher.formData?.get("intent") === "publish";
+
+  // T1-6: Block navigation when form has unsaved changes
+  const blocker = useBlocker(isDirty && !publishSuccess);
 
   // Handle auto-save debounce
   const autoSave = useCallback(
@@ -230,6 +246,7 @@ export default function WizardPage() {
         autoSave(next);
         return next;
       });
+      setIsDirty(true);
       // Clear error for this field
       setErrors((prev) => {
         const next = { ...prev };
@@ -293,13 +310,27 @@ export default function WizardPage() {
     fetcherRef.current.submit(fd, { method: "POST" });
   }, [formData, pageVersion]);
 
-  // Handle action results
+  // Handle action results — sync version from server
   useEffect(() => {
     if (fetcher.data?.success) {
-      // Increment local version on successful save
-      setPageVersion((prev) => (prev !== undefined ? prev + 1 : 1));
+      const data = fetcher.data as {
+        success: boolean;
+        intent: string;
+        newVersion?: number;
+        shopifyPageId?: string;
+        pageHandle?: string;
+      };
+      if (data.newVersion !== undefined) {
+        setPageVersion(data.newVersion);
+      }
+      // Mark as not dirty after successful save
+      setIsDirty(false);
       if (fetcher.data.intent === "publish") {
         setPublishSuccess(true);
+        setPublishResult({
+          shopifyPageId: data.shopifyPageId,
+          pageHandle: data.pageHandle,
+        });
       }
     }
   }, [fetcher.data]);
@@ -330,16 +361,12 @@ export default function WizardPage() {
             <WizardStepper currentStep={currentStep} />
 
             {publishSuccess ? (
-              <Banner
-                tone="success"
-                title={isUpdate ? "ページが更新されました" : "ページが作成されました"}
-              >
-                <p>
-                  特定商取引法に基づく表記ページが正常に
-                  {isUpdate ? "更新" : "作成（非公開）"}されました。
-                  {!isUpdate && "Shopify管理画面の「オンラインストア > ページ」から公開設定を行ってください。"}
-                </p>
-              </Banner>
+              <CompletionScreen
+                isUpdate={isUpdate}
+                shopifyPageId={publishResult?.shopifyPageId}
+                pageHandle={publishResult?.pageHandle}
+                shop={shop}
+              />
             ) : (
               <>
                 {fetcher.data?.intent === "publish" &&
@@ -400,6 +427,32 @@ export default function WizardPage() {
           </BlockStack>
         </Layout.Section>
       </Layout>
+
+      {/* T1-6: Exit confirmation modal */}
+      {blocker.state === "blocked" && (
+        <Modal
+          open
+          onClose={() => blocker.reset()}
+          title="編集内容が保存されていません"
+          primaryAction={{
+            content: "このページを離れる",
+            destructive: true,
+            onAction: () => blocker.proceed(),
+          }}
+          secondaryActions={[
+            {
+              content: "編集を続ける",
+              onAction: () => blocker.reset(),
+            },
+          ]}
+        >
+          <Modal.Section>
+            <Text as="p">
+              保存されていない変更があります。このページを離れると、変更内容が失われる可能性があります。
+            </Text>
+          </Modal.Section>
+        </Modal>
+      )}
     </Page>
   );
 }

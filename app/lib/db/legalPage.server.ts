@@ -1,25 +1,38 @@
 import db from "../../db.server";
 import type { PageType, PageStatus } from "../../types/wizard";
+import { encryptFormData, decryptFormData } from "../crypto.server";
+
+/**
+ * Decrypt formData field if present and encrypted.
+ */
+function decryptPageFormData<T extends { formData: string | null }>(page: T): T {
+  if (page.formData) {
+    return { ...page, formData: decryptFormData(page.formData) };
+  }
+  return page;
+}
 
 /**
  * Get a legal page by store and page type.
  */
 export async function getLegalPage(storeId: string, pageType: PageType) {
-  return db.legalPage.findUnique({
+  const page = await db.legalPage.findUnique({
     where: {
       storeId_pageType: { storeId, pageType },
     },
   });
+  return page ? decryptPageFormData(page) : null;
 }
 
 /**
  * Get all legal pages for a store.
  */
 export async function getLegalPages(storeId: string) {
-  return db.legalPage.findMany({
+  const pages = await db.legalPage.findMany({
     where: { storeId },
     orderBy: { updatedAt: "desc" },
   });
+  return pages.map(decryptPageFormData);
 }
 
 /**
@@ -34,8 +47,10 @@ export async function upsertLegalPageDraft(
 ) {
   const existing = await getLegalPage(storeId, pageType);
 
+  const encryptedFormData = formData != null ? encryptFormData(formData) : formData;
+
   if (existing) {
-    // Optimistic lock check
+    // Optimistic lock check (read raw version from DB, not decrypted copy)
     if (expectedVersion !== undefined && existing.version !== expectedVersion) {
       throw new OptimisticLockError(
         "このページは別のセッションで更新されています。再読み込みしてください。",
@@ -45,7 +60,7 @@ export async function upsertLegalPageDraft(
     return db.legalPage.update({
       where: { id: existing.id },
       data: {
-        formData,
+        formData: encryptedFormData,
         version: existing.version + 1,
       },
     });
@@ -55,7 +70,7 @@ export async function upsertLegalPageDraft(
     data: {
       storeId,
       pageType,
-      formData,
+      formData: encryptedFormData,
       status: "draft",
     },
   });
@@ -75,6 +90,11 @@ export async function publishLegalPage(
   },
   expectedVersion?: number,
 ) {
+  const encryptedData = {
+    ...data,
+    formData: encryptFormData(data.formData),
+  };
+
   const existing = await getLegalPage(storeId, pageType);
 
   if (existing) {
@@ -87,7 +107,7 @@ export async function publishLegalPage(
     return db.legalPage.update({
       where: { id: existing.id },
       data: {
-        ...data,
+        ...encryptedData,
         status: "published" as PageStatus,
         version: existing.version + 1,
       },
@@ -98,7 +118,7 @@ export async function publishLegalPage(
     data: {
       storeId,
       pageType,
-      ...data,
+      ...encryptedData,
       status: "published",
     },
   });
