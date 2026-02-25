@@ -46,7 +46,7 @@ export function Step3PreviewPublish({
           loading={isPublishing}
           size="large"
         >
-          {isUpdate ? "ページを更新する" : "ページを公開する"}
+          {isUpdate ? "ページを更新する" : "ページを作成する"}
         </Button>
       </InlineStack>
     </BlockStack>

@@ -1,4 +1,4 @@
-FROM node:18-alpine AS build
+FROM node:20.19-alpine AS build
 RUN apk add --no-cache openssl
 WORKDIR /app
 COPY package.json package-lock.json* ./
@@ -6,7 +6,7 @@ RUN npm ci && npm cache clean --force
 COPY . .
 RUN npm run build
 
-FROM node:18-alpine
+FROM node:20.19-alpine
 RUN apk add --no-cache openssl
 WORKDIR /app
 ENV NODE_ENV=production
