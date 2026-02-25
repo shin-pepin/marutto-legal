@@ -6,7 +6,6 @@ import {
   Button,
   InlineStack,
   Icon,
-  Banner,
   Box,
 } from "@shopify/polaris";
 import { CheckCircleIcon } from "@shopify/polaris-icons";
@@ -15,7 +14,6 @@ interface CompletionScreenProps {
   isUpdate: boolean;
   shopifyPageId?: string;
   pageHandle?: string;
-  menuAdded?: boolean;
   shop: string;
 }
 
@@ -23,7 +21,6 @@ export function CompletionScreen({
   isUpdate,
   shopifyPageId,
   pageHandle,
-  menuAdded,
   shop,
 }: CompletionScreenProps) {
   const navigate = useNavigate();
@@ -35,7 +32,7 @@ export function CompletionScreen({
 
   return (
     <Card>
-      <BlockStack gap="400" align="center">
+      <BlockStack gap="400" inlineAlign="center">
         <Box paddingBlockStart="400">
           <InlineStack align="center" gap="200">
             <Icon source={CheckCircleIcon} tone="success" />
@@ -51,12 +48,6 @@ export function CompletionScreen({
           {!isUpdate &&
             "ページは非公開で作成されています。Shopify管理画面から公開設定を行ってください。"}
         </Text>
-
-        {menuAdded && (
-          <Banner tone="success">
-            <p>フッターメニューにリンクが追加されました。</p>
-          </Banner>
-        )}
 
         <InlineStack align="center" gap="300">
           {shopifyAdminPageId && (

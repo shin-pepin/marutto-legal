@@ -29,7 +29,6 @@ import {
   OptimisticLockError,
 } from "../lib/db/legalPage.server";
 import { createPage, updatePage, getPage } from "../lib/shopify/pages.server";
-import { getMenus, addPageToMenu } from "../lib/shopify/menu.server";
 import type { TokushohoFormData } from "../types/wizard";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -38,11 +37,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   await ensureStore(shop);
 
-  // Load existing form data and menus in parallel
-  const [existingPage, menus] = await Promise.all([
-    getLegalPage(shop, "tokushoho"),
-    getMenus(admin).catch(() => []), // Don't block wizard if menu fetch fails
-  ]);
+  const existingPage = await getLegalPage(shop, "tokushoho");
 
   let formData: Partial<TokushohoFormData> = {};
   if (existingPage?.formData) {
@@ -63,7 +58,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           version: existingPage.version,
         }
       : null,
-    menus: menus.map((m) => ({ id: m.id, title: m.title, handle: m.handle })),
     shop,
   });
 };
@@ -163,21 +157,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       pageHandle = result.handle;
     }
 
-    // Add to menu if requested
-    const addToMenu = formPayload.get("addToMenu") === "true";
-    const menuId = formPayload.get("menuId") as string | null;
-    let menuAdded = false;
-
-    if (addToMenu && menuId && pageHandle) {
-      try {
-        const pageUrl = `/pages/${pageHandle}`;
-        await addPageToMenu(admin, menuId, "特定商取引法に基づく表記", pageUrl);
-        menuAdded = true;
-      } catch {
-        // Menu add failure is non-critical — don't fail the publish
-      }
-    }
-
     // Save to DB with optimistic lock
     const versionStr = formPayload.get("version") as string | null;
     const expectedVersion = versionStr ? parseInt(versionStr, 10) : undefined;
@@ -193,7 +172,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         shopifyPageId,
         pageHandle,
         newVersion: published.version,
-        menuAdded,
       });
     } catch (error) {
       if (error instanceof OptimisticLockError) {
@@ -207,7 +185,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function WizardPage() {
-  const { formData: initialFormData, existingPage, menus, shop } =
+  const { formData: initialFormData, existingPage, shop } =
     useLoaderData<typeof loader>();
 
   const fetcher = useFetcher<typeof action>();
@@ -226,7 +204,6 @@ export default function WizardPage() {
   const [publishResult, setPublishResult] = useState<{
     shopifyPageId?: string;
     pageHandle?: string;
-    menuAdded?: boolean;
   } | null>(null);
   const [pageVersion, setPageVersion] = useState<number | undefined>(
     existingPage?.version,
@@ -323,16 +300,12 @@ export default function WizardPage() {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
   }, []);
 
-  const handlePublish = useCallback((options?: { addToMenu?: boolean; menuId?: string }) => {
+  const handlePublish = useCallback(() => {
     const fd = new FormData();
     fd.append("intent", "publish");
     fd.append("formData", JSON.stringify(formData));
     if (pageVersion !== undefined) {
       fd.append("version", String(pageVersion));
-    }
-    if (options?.addToMenu && options.menuId) {
-      fd.append("addToMenu", "true");
-      fd.append("menuId", options.menuId);
     }
     fetcherRef.current.submit(fd, { method: "POST" });
   }, [formData, pageVersion]);
@@ -346,7 +319,6 @@ export default function WizardPage() {
         newVersion?: number;
         shopifyPageId?: string;
         pageHandle?: string;
-        menuAdded?: boolean;
       };
       if (data.newVersion !== undefined) {
         setPageVersion(data.newVersion);
@@ -358,7 +330,6 @@ export default function WizardPage() {
         setPublishResult({
           shopifyPageId: data.shopifyPageId,
           pageHandle: data.pageHandle,
-          menuAdded: data.menuAdded,
         });
       }
     }
@@ -394,7 +365,6 @@ export default function WizardPage() {
                 isUpdate={isUpdate}
                 shopifyPageId={publishResult?.shopifyPageId}
                 pageHandle={publishResult?.pageHandle}
-                menuAdded={publishResult?.menuAdded}
                 shop={shop}
               />
             ) : (
@@ -435,7 +405,6 @@ export default function WizardPage() {
                     onPublish={handlePublish}
                     isPublishing={isPublishing}
                     isUpdate={isUpdate}
-                    menus={menus}
                   />
                 )}
 
