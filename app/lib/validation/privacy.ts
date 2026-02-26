@@ -3,6 +3,32 @@ import { z } from "zod";
 const MAX_TEXT_LENGTH = 500;
 const MAX_LONG_TEXT_LENGTH = 2000;
 
+// Valid values for collectedInfo and purposeOfUse (defined before schemas that reference them)
+export const COLLECTED_INFO_OPTIONS = [
+  { value: "name", label: "氏名" },
+  { value: "email", label: "メールアドレス" },
+  { value: "address", label: "住所" },
+  { value: "phone", label: "電話番号" },
+  { value: "birthday", label: "生年月日" },
+  { value: "payment", label: "決済情報（クレジットカード番号等）" },
+  { value: "purchase_history", label: "購入履歴" },
+  { value: "ip_address", label: "IPアドレス" },
+  { value: "cookie", label: "Cookie情報" },
+] as const;
+
+export const PURPOSE_OF_USE_OPTIONS = [
+  { value: "order_processing", label: "ご注文の処理・配送" },
+  { value: "customer_support", label: "お問い合わせへの対応" },
+  { value: "marketing", label: "新商品・セール等のご案内" },
+  { value: "service_improvement", label: "サービスの改善・開発" },
+  { value: "analytics", label: "アクセス解析・統計情報の作成" },
+  { value: "legal", label: "法令に基づく対応" },
+  { value: "fraud_prevention", label: "不正行為の防止" },
+] as const;
+
+const COLLECTED_INFO_VALUES = COLLECTED_INFO_OPTIONS.map((o) => o.value) as [string, ...string[]];
+const PURPOSE_OF_USE_VALUES = PURPOSE_OF_USE_OPTIONS.map((o) => o.value) as [string, ...string[]];
+
 // Step 1: 基本情報
 export const privacyStep1Schema = z.object({
   businessName: z
@@ -31,14 +57,14 @@ export const privacyStep1Schema = z.object({
 // Step 2: 収集・利用情報
 export const privacyStep2Schema = z.object({
   collectedInfo: z
-    .array(z.string())
+    .array(z.enum(COLLECTED_INFO_VALUES))
     .min(1, "収集する個人情報を1つ以上選択してください"),
   collectedInfoOther: z
     .string()
     .max(MAX_LONG_TEXT_LENGTH)
     .default(""),
   purposeOfUse: z
-    .array(z.string())
+    .array(z.enum(PURPOSE_OF_USE_VALUES))
     .min(1, "利用目的を1つ以上選択してください"),
   purposeOfUseOther: z
     .string()
@@ -95,25 +121,3 @@ export function validatePrivacyStep(step: number, data: unknown) {
       return privacyFormSchema.safeParse(data);
   }
 }
-
-export const COLLECTED_INFO_OPTIONS = [
-  { value: "name", label: "氏名" },
-  { value: "email", label: "メールアドレス" },
-  { value: "address", label: "住所" },
-  { value: "phone", label: "電話番号" },
-  { value: "birthday", label: "生年月日" },
-  { value: "payment", label: "決済情報（クレジットカード番号等）" },
-  { value: "purchase_history", label: "購入履歴" },
-  { value: "ip_address", label: "IPアドレス" },
-  { value: "cookie", label: "Cookie情報" },
-] as const;
-
-export const PURPOSE_OF_USE_OPTIONS = [
-  { value: "order_processing", label: "ご注文の処理・配送" },
-  { value: "customer_support", label: "お問い合わせへの対応" },
-  { value: "marketing", label: "新商品・セール等のご案内" },
-  { value: "service_improvement", label: "サービスの改善・開発" },
-  { value: "analytics", label: "アクセス解析・統計情報の作成" },
-  { value: "legal", label: "法令に基づく対応" },
-  { value: "fraud_prevention", label: "不正行為の防止" },
-] as const;

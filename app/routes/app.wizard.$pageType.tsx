@@ -12,7 +12,6 @@ import {
   Modal,
   Text,
   Card,
-  Box,
   Badge,
   List,
 } from "@shopify/polaris";
@@ -31,9 +30,9 @@ import {
   checkVersionOrThrow,
   OptimisticLockError,
 } from "../lib/db/legalPage.server";
-import { createPage, updatePage, getPage } from "../lib/shopify/pages.server";
+import { createPage, updatePage, getPage, ShopifyApiError } from "../lib/shopify/pages.server";
 import { checkPlanAccess, IS_TEST_BILLING } from "../lib/requirePlan.server";
-import type { BillingCheckContext, PlanLevel } from "../lib/requirePlan.server";
+import type { BillingCheckContext } from "../lib/requirePlan.server";
 import { getPageTypeConfig, isValidPageType } from "../lib/pageTypes/registry";
 import "../lib/pageTypes";
 import type { PageType } from "../types/wizard";
@@ -193,16 +192,27 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     let shopifyPageId: string;
     let pageHandle: string | undefined;
 
-    if (existingPage?.shopifyPageId) {
-      const page = await getPage(admin, existingPage.shopifyPageId);
-      if (page) {
-        await updatePage(admin, existingPage.shopifyPageId, {
-          bodyHtml: contentHtml,
-        });
-        shopifyPageId = existingPage.shopifyPageId;
-        pageHandle = page.handle;
+    try {
+      if (existingPage?.shopifyPageId) {
+        const page = await getPage(admin, existingPage.shopifyPageId);
+        if (page) {
+          await updatePage(admin, existingPage.shopifyPageId, {
+            bodyHtml: contentHtml,
+          });
+          shopifyPageId = existingPage.shopifyPageId;
+          pageHandle = page.handle;
+        } else {
+          // Page was deleted on Shopify — recreate
+          const result = await createPage(admin, {
+            title: config.shopifyPageTitle,
+            handle: config.handle,
+            bodyHtml: contentHtml,
+            published: false,
+          });
+          shopifyPageId = result.pageId;
+          pageHandle = result.handle;
+        }
       } else {
-        // Page was deleted on Shopify — recreate
         const result = await createPage(admin, {
           title: config.shopifyPageTitle,
           handle: config.handle,
@@ -212,15 +222,12 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         shopifyPageId = result.pageId;
         pageHandle = result.handle;
       }
-    } else {
-      const result = await createPage(admin, {
-        title: config.shopifyPageTitle,
-        handle: config.handle,
-        bodyHtml: contentHtml,
-        published: false,
-      });
-      shopifyPageId = result.pageId;
-      pageHandle = result.handle;
+    } catch (error) {
+      console.error("[publish] Shopify API error:", error);
+      const message = error instanceof ShopifyApiError
+        ? error.message
+        : "Shopifyページの作成・更新に失敗しました。しばらくしてからもう一度お試しください。";
+      return json({ success: false, intent: "publish", error: message }, { status: 502 });
     }
 
     // Save to DB with optimistic lock (double-check, race window is now minimal)
@@ -507,17 +514,19 @@ export default function WizardPage() {
               />
             ) : (
               <>
+                {fetcher.data && !fetcher.data.success && (fetcher.data as Record<string, unknown>).error && (
+                  <Banner tone={fetcher.data.intent === "save-draft" ? "warning" : "critical"}>
+                    <p>{String((fetcher.data as Record<string, unknown>).error)}</p>
+                  </Banner>
+                )}
+
                 {fetcher.data?.intent === "publish" &&
                   !fetcher.data.success &&
-                  ((fetcher.data as Record<string, unknown>).errors ? (
+                  (fetcher.data as Record<string, unknown>).errors && (
                     <Banner tone="critical">
                       <p>入力内容にエラーがあります。修正してください。</p>
                     </Banner>
-                  ) : (fetcher.data as Record<string, unknown>).error ? (
-                    <Banner tone="critical">
-                      <p>{String((fetcher.data as Record<string, unknown>).error)}</p>
-                    </Banner>
-                  ) : null)}
+                  )}
 
                 {CurrentStepComponent && (
                   <CurrentStepComponent

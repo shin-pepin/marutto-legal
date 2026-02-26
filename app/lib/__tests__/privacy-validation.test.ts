@@ -123,10 +123,26 @@ describe("privacyStep2Schema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects invalid collectedInfo values", () => {
+    const result = privacyStep2Schema.safeParse({
+      ...validStep2,
+      collectedInfo: ["name", "hacker_input"],
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("requires at least one purpose of use", () => {
     const result = privacyStep2Schema.safeParse({
       ...validStep2,
       purposeOfUse: [],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid purposeOfUse values", () => {
+    const result = privacyStep2Schema.safeParse({
+      ...validStep2,
+      purposeOfUse: ["order_processing", "unknown_purpose"],
     });
     expect(result.success).toBe(false);
   });

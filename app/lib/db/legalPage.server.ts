@@ -82,8 +82,7 @@ export async function upsertLegalPageDraft(
   expectedVersion?: number,
 ) {
   const existing = await getLegalPageMeta(storeId, pageType);
-
-  const encryptedFormData = formData != null ? encryptFormData(formData) : formData;
+  const encryptedFormData = encryptFormData(formData);
 
   if (existing) {
     if (expectedVersion !== undefined) {

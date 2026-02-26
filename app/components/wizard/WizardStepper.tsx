@@ -4,16 +4,10 @@ import type { StepDefinition } from "../../lib/pageTypes/registry";
 
 interface WizardStepperProps {
   currentStep: number;
-  steps?: StepDefinition[];
+  steps: StepDefinition[];
 }
 
-const DEFAULT_STEPS: StepDefinition[] = [
-  { label: "Step 1", description: "事業者情報" },
-  { label: "Step 2", description: "販売条件" },
-  { label: "Step 3", description: "プレビュー & 公開" },
-];
-
-export function WizardStepper({ currentStep, steps = DEFAULT_STEPS }: WizardStepperProps) {
+export function WizardStepper({ currentStep, steps }: WizardStepperProps) {
   return (
     <Box paddingBlockEnd="400">
       <div style={{ display: "flex", justifyContent: "center" }}>
