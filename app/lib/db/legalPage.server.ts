@@ -50,11 +50,21 @@ export async function upsertLegalPageDraft(
   const encryptedFormData = formData != null ? encryptFormData(formData) : formData;
 
   if (existing) {
-    // Optimistic lock check (read raw version from DB, not decrypted copy)
-    if (expectedVersion !== undefined && existing.version !== expectedVersion) {
-      throw new OptimisticLockError(
-        "このページは別のセッションで更新されています。再読み込みしてください。",
-      );
+    if (expectedVersion !== undefined) {
+      // Atomic check-and-update to prevent TOCTOU race
+      const result = await db.legalPage.updateMany({
+        where: { id: existing.id, version: expectedVersion },
+        data: {
+          formData: encryptedFormData,
+          version: expectedVersion + 1,
+        },
+      });
+      if (result.count === 0) {
+        throw new OptimisticLockError(
+          "このページは別のセッションで更新されています。再読み込みしてください。",
+        );
+      }
+      return db.legalPage.findUniqueOrThrow({ where: { id: existing.id } });
     }
 
     return db.legalPage.update({
@@ -98,10 +108,22 @@ export async function publishLegalPage(
   const existing = await getLegalPage(storeId, pageType);
 
   if (existing) {
-    if (expectedVersion !== undefined && existing.version !== expectedVersion) {
-      throw new OptimisticLockError(
-        "このページは別のセッションで更新されています。再読み込みしてください。",
-      );
+    if (expectedVersion !== undefined) {
+      // Atomic check-and-update to prevent TOCTOU race
+      const result = await db.legalPage.updateMany({
+        where: { id: existing.id, version: expectedVersion },
+        data: {
+          ...encryptedData,
+          status: "published" as PageStatus,
+          version: expectedVersion + 1,
+        },
+      });
+      if (result.count === 0) {
+        throw new OptimisticLockError(
+          "このページは別のセッションで更新されています。再読み込みしてください。",
+        );
+      }
+      return db.legalPage.findUniqueOrThrow({ where: { id: existing.id } });
     }
 
     return db.legalPage.update({

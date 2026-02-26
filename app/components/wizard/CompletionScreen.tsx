@@ -15,6 +15,7 @@ interface CompletionScreenProps {
   shopifyPageId?: string;
   pageHandle?: string;
   shop: string;
+  pageTypeTitle?: string;
 }
 
 export function CompletionScreen({
@@ -22,6 +23,7 @@ export function CompletionScreen({
   shopifyPageId,
   pageHandle,
   shop,
+  pageTypeTitle = "特定商取引法に基づく表記",
 }: CompletionScreenProps) {
   const navigate = useNavigate();
 
@@ -43,7 +45,7 @@ export function CompletionScreen({
         </Box>
 
         <Text as="p" alignment="center">
-          特定商取引法に基づく表記ページが正常に
+          {pageTypeTitle}ページが正常に
           {isUpdate ? "更新" : "作成"}されました。
           {!isUpdate &&
             "ページは非公開で作成されています。Shopify管理画面から公開設定を行ってください。"}
@@ -58,7 +60,7 @@ export function CompletionScreen({
               Shopify管理画面で確認
             </Button>
           )}
-          {pageHandle && (
+          {isUpdate && pageHandle && (
             <Button
               url={`https://${shop}/pages/${pageHandle}`}
               target="_blank"
@@ -74,19 +76,11 @@ export function CompletionScreen({
           borderColor="border"
           paddingBlockStart="400"
         >
-          <BlockStack gap="300">
-            <Text as="h3" variant="headingMd">
-              次のステップ
-            </Text>
-            <Text as="p" tone="subdued">
-              プライバシーポリシーの作成もお忘れなく。近日対応予定です。
-            </Text>
-            <InlineStack gap="200">
-              <Button variant="primary" onClick={() => navigate("/app")}>
-                ダッシュボードに戻る
-              </Button>
-            </InlineStack>
-          </BlockStack>
+          <InlineStack gap="200">
+            <Button variant="primary" onClick={() => navigate("/app")}>
+              ダッシュボードに戻る
+            </Button>
+          </InlineStack>
         </Box>
       </BlockStack>
     </Card>

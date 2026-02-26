@@ -1,0 +1,2 @@
+import "./tokushoho";
+import "./privacy";
