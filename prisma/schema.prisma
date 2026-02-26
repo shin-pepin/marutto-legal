@@ -28,15 +28,12 @@ model Session {
 }
 
 model Store {
-  id                 String      @id // Shopify shop_id (domain)
-  shopDomain         String      @unique
-  plan               String      @default("free")
-  trialEndsAt        DateTime?
-  billingConfirmedAt DateTime?
-  installedAt        DateTime    @default(now())
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
-  legalPages         LegalPage[]
+  id          String      @id // Shopify shop_id (domain)
+  shopDomain  String      @unique
+  installedAt DateTime    @default(now())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  legalPages  LegalPage[]
 }
 
 model LegalPage {

@@ -172,6 +172,13 @@ export async function publishLegalPage(
     });
   }
 
+  // First-time creation: expectedVersion is not applicable (no existing record to lock).
+  if (expectedVersion !== undefined) {
+    console.warn(
+      `[legalPage] publishLegalPage: expectedVersion=${expectedVersion} was provided but no existing page found for ${storeId}/${pageType}. Ignoring version for initial creation.`,
+    );
+  }
+
   return db.legalPage.create({
     data: {
       storeId,
