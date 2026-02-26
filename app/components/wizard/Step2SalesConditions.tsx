@@ -14,23 +14,15 @@ import {
 import { ChevronDownIcon, ChevronUpIcon } from "@shopify/polaris-icons";
 import { TemplateInsertButton } from "./TemplateInsertButton";
 import { PAYMENT_METHODS, TEMPLATE_TEXTS } from "../../types/wizard";
-import type { TokushohoFormData } from "../../types/wizard";
-
-interface Step2Props {
-  formData: Partial<TokushohoFormData>;
-  errors: Record<string, string>;
-  onChange: (field: string, value: string | string[]) => void;
-  openSections: Record<string, boolean>;
-  onToggleSection: (section: string) => void;
-}
+import type { WizardStepProps } from "./pageTypeUI";
 
 export function Step2SalesConditions({
   formData,
   errors,
   onChange,
-  openSections,
-  onToggleSection,
-}: Step2Props) {
+  openSections = {},
+  onToggleSection = () => {},
+}: WizardStepProps) {
   const handlePaymentMethodsChange = useCallback(
     (value: string[]) => {
       onChange("paymentMethods", value);

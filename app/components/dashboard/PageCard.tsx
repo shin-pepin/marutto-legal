@@ -8,7 +8,6 @@ import {
 } from "@shopify/polaris";
 
 interface PageCardProps {
-  pageType: string;
   pageTypeLabel: string;
   status: string;
   updatedAt: string;

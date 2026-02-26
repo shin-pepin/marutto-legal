@@ -1,27 +1,18 @@
 import { Box, InlineStack, Text, Icon } from "@shopify/polaris";
 import { CheckCircleIcon } from "@shopify/polaris-icons";
-
-interface Step {
-  label: string;
-  description: string;
-}
-
-const STEPS: Step[] = [
-  { label: "Step 1", description: "事業者情報" },
-  { label: "Step 2", description: "販売条件" },
-  { label: "Step 3", description: "プレビュー & 公開" },
-];
+import type { StepDefinition } from "../../lib/pageTypes/registry";
 
 interface WizardStepperProps {
   currentStep: number;
+  steps: StepDefinition[];
 }
 
-export function WizardStepper({ currentStep }: WizardStepperProps) {
+export function WizardStepper({ currentStep, steps }: WizardStepperProps) {
   return (
     <Box paddingBlockEnd="400">
       <div style={{ display: "flex", justifyContent: "center" }}>
         <InlineStack gap="300" blockAlign="center">
-          {STEPS.map((step, index) => {
+          {steps.map((step, index) => {
             const stepNumber = index + 1;
             const isActive = stepNumber === currentStep;
             const isCompleted = stepNumber < currentStep;
@@ -57,7 +48,7 @@ export function WizardStepper({ currentStep }: WizardStepperProps) {
                 >
                   {step.description}
                 </Text>
-                {index < STEPS.length - 1 && (
+                {index < steps.length - 1 && (
                   <Text as="span" tone="subdued">
                     →
                   </Text>

@@ -13,7 +13,7 @@ function getEncryptionKey(): Buffer {
       "ENCRYPTION_KEY environment variable is required. Generate with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
     );
   }
-  if (hex.length !== 64) {
+  if (!/^[0-9a-fA-F]{64}$/.test(hex)) {
     throw new Error(
       "ENCRYPTION_KEY must be 64 hex characters (32 bytes).",
     );

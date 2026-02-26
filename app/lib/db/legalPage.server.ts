@@ -13,7 +13,7 @@ function decryptPageFormData<T extends { formData: string | null }>(page: T): T 
 }
 
 /**
- * Get a legal page by store and page type.
+ * Get a legal page by store and page type (with decrypted formData).
  */
 export async function getLegalPage(storeId: string, pageType: PageType) {
   const page = await db.legalPage.findUnique({
@@ -22,6 +22,42 @@ export async function getLegalPage(storeId: string, pageType: PageType) {
     },
   });
   return page ? decryptPageFormData(page) : null;
+}
+
+/**
+ * Get page metadata (id, version, shopifyPageId, status) without decrypting formData.
+ * Use this when you only need metadata (e.g., for optimistic lock checks).
+ */
+export async function getLegalPageMeta(storeId: string, pageType: PageType) {
+  return db.legalPage.findUnique({
+    where: {
+      storeId_pageType: { storeId, pageType },
+    },
+    select: {
+      id: true,
+      version: true,
+      shopifyPageId: true,
+      status: true,
+    },
+  });
+}
+
+/**
+ * Pre-check optimistic lock version before external API calls.
+ * Throws OptimisticLockError if the version doesn't match.
+ */
+export async function checkVersionOrThrow(
+  storeId: string,
+  pageType: PageType,
+  expectedVersion: number | undefined,
+): Promise<void> {
+  if (expectedVersion === undefined) return;
+  const meta = await getLegalPageMeta(storeId, pageType);
+  if (meta && meta.version !== expectedVersion) {
+    throw new OptimisticLockError(
+      "このページは別のセッションで更新されています。再読み込みしてください。",
+    );
+  }
 }
 
 /**
@@ -45,16 +81,25 @@ export async function upsertLegalPageDraft(
   formData: string,
   expectedVersion?: number,
 ) {
-  const existing = await getLegalPage(storeId, pageType);
-
-  const encryptedFormData = formData != null ? encryptFormData(formData) : formData;
+  const existing = await getLegalPageMeta(storeId, pageType);
+  const encryptedFormData = encryptFormData(formData);
 
   if (existing) {
-    // Optimistic lock check (read raw version from DB, not decrypted copy)
-    if (expectedVersion !== undefined && existing.version !== expectedVersion) {
-      throw new OptimisticLockError(
-        "このページは別のセッションで更新されています。再読み込みしてください。",
-      );
+    if (expectedVersion !== undefined) {
+      // Atomic check-and-update to prevent TOCTOU race
+      const result = await db.legalPage.updateMany({
+        where: { id: existing.id, version: expectedVersion },
+        data: {
+          formData: encryptedFormData,
+          version: expectedVersion + 1,
+        },
+      });
+      if (result.count === 0) {
+        throw new OptimisticLockError(
+          "このページは別のセッションで更新されています。再読み込みしてください。",
+        );
+      }
+      return db.legalPage.findUniqueOrThrow({ where: { id: existing.id } });
     }
 
     return db.legalPage.update({
@@ -95,13 +140,25 @@ export async function publishLegalPage(
     formData: encryptFormData(data.formData),
   };
 
-  const existing = await getLegalPage(storeId, pageType);
+  const existing = await getLegalPageMeta(storeId, pageType);
 
   if (existing) {
-    if (expectedVersion !== undefined && existing.version !== expectedVersion) {
-      throw new OptimisticLockError(
-        "このページは別のセッションで更新されています。再読み込みしてください。",
-      );
+    if (expectedVersion !== undefined) {
+      // Atomic check-and-update to prevent TOCTOU race
+      const result = await db.legalPage.updateMany({
+        where: { id: existing.id, version: expectedVersion },
+        data: {
+          ...encryptedData,
+          status: "published" as PageStatus,
+          version: expectedVersion + 1,
+        },
+      });
+      if (result.count === 0) {
+        throw new OptimisticLockError(
+          "このページは別のセッションで更新されています。再読み込みしてください。",
+        );
+      }
+      return db.legalPage.findUniqueOrThrow({ where: { id: existing.id } });
     }
 
     return db.legalPage.update({
@@ -112,6 +169,13 @@ export async function publishLegalPage(
         version: existing.version + 1,
       },
     });
+  }
+
+  // First-time creation: expectedVersion is not applicable (no existing record to lock).
+  if (expectedVersion !== undefined) {
+    console.warn(
+      `[legalPage] publishLegalPage: expectedVersion=${expectedVersion} was provided but no existing page found for ${storeId}/${pageType}. Ignoring version for initial creation.`,
+    );
   }
 
   return db.legalPage.create({

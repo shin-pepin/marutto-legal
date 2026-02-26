@@ -8,27 +8,30 @@ import {
   EmptyState,
   Banner,
   Text,
+  Card,
+  InlineStack,
+  Button,
+  Badge,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
-import { authenticate } from "../shopify.server";
+import { authenticate, BASIC_PLAN } from "../shopify.server";
 import { ensureStore } from "../lib/db/store.server";
 import { getLegalPages, markDeletedOnShopify } from "../lib/db/legalPage.server";
 import { PageCard } from "../components/dashboard/PageCard";
 import { withRetry, hasRetryableGraphQLError } from "../lib/shopify/retry.server";
-
-// Phase 2以降で privacy, terms, return のウィザードを追加予定
-const PAGE_TYPE_LABELS: Record<string, string> = {
-  tokushoho: "特定商取引法に基づく表記",
-  privacy: "プライバシーポリシー",
-  terms: "利用規約",
-  return: "返品・交換ポリシー",
-};
+import { checkPlanAccess } from "../lib/requirePlan.server";
+import type { BillingCheckContext } from "../lib/requirePlan.server";
+import { getAllPageTypes } from "../lib/pageTypes/registry";
+import "../lib/pageTypes";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin, session } = await authenticate.admin(request);
+  const { admin, billing, session } = await authenticate.admin(request);
   const shop = session.shop;
 
   await ensureStore(shop);
+
+  // Check if user has Basic plan
+  const hasPaidPlan = await checkPlanAccess(billing as BillingCheckContext, "basic");
   let pages = await getLegalPages(shop);
 
   // T1-4: Check if published pages still exist on Shopify
@@ -38,7 +41,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   if (pagesWithShopifyId.length > 0) {
     try {
-      // Bulk check using nodes query (single request for all pages)
       const ids = pagesWithShopifyId.map((p) => p.shopifyPageId!);
       const result = await withRetry(async () => {
         const response = await admin.graphql(
@@ -64,7 +66,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           .map((n: { id: string }) => n.id),
       );
 
-      // Mark pages that no longer exist on Shopify
       const deletedPages = pagesWithShopifyId.filter(
         (p) => !existingIds.has(p.shopifyPageId!),
       );
@@ -73,7 +74,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         deletedPages.map((p) => markDeletedOnShopify(p.id)),
       );
 
-      // Update local data to reflect changes (immutable)
       const deletedIds = new Set(deletedPages.map((p) => p.id));
       pages = pages.map((p) =>
         deletedIds.has(p.id)
@@ -85,14 +85,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
   }
 
-  return json({ pages, shop });
+  return json({ pages, shop, hasPaidPlan });
 };
 
 export default function DashboardPage() {
-  const { pages } = useLoaderData<typeof loader>();
+  const { pages, hasPaidPlan } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
 
+  const allPageTypes = getAllPageTypes();
   const hasPages = pages.length > 0;
+  const existingPageTypes = new Set(pages.map((p) => p.pageType));
+  const uncreatedPageTypes = allPageTypes.filter(
+    (pt) => !existingPageTypes.has(pt.type),
+  );
 
   return (
     <Page>
@@ -108,43 +113,71 @@ export default function DashboardPage() {
 
             {!hasPages ? (
               <EmptyState
-                heading="特商法ページを作成しましょう"
+                heading="法的ページを作成しましょう"
                 action={{
                   content: "特商法ページを作成する",
-                  onAction: () => navigate("/app/wizard"),
+                  onAction: () => navigate("/app/wizard/tokushoho"),
+                }}
+                secondaryAction={{
+                  content: "プライバシーポリシーを作成する",
+                  onAction: () => navigate("/app/wizard/privacy"),
                 }}
                 image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
               >
                 <p>
-                  フォームに入力するだけで、特定商取引法に基づく表記ページを自動生成できます。
+                  フォームに入力するだけで、ECサイトに必要な法的ページを自動生成できます。
                 </p>
               </EmptyState>
             ) : (
               <BlockStack gap="400">
-                {pages.map((page) => (
+                {pages.map((page) => {
+                  const ptConfig = allPageTypes.find((pt) => pt.type === page.pageType);
+                  return (
                   <PageCard
                     key={page.id}
-                    pageType={page.pageType}
                     pageTypeLabel={
-                      PAGE_TYPE_LABELS[page.pageType] || page.pageType
+                      ptConfig?.shopifyPageTitle || page.pageType
                     }
                     status={page.status}
                     updatedAt={page.updatedAt}
                     shopifyPageId={page.shopifyPageId}
-                    onEdit={() => navigate("/app/wizard")}
+                    onEdit={() => navigate(`/app/wizard/${page.pageType}`)}
                   />
-                ))}
+                  );
+                })}
 
-                {/* Show prompt for pages not yet created */}
-                {!pages.find((p) => p.pageType === "tokushoho") && (
-                  <Banner
-                    tone="warning"
-                    title="特定商取引法に基づく表記がまだ作成されていません"
-                    action={{
-                      content: "作成する",
-                      onAction: () => navigate("/app/wizard"),
-                    }}
-                  />
+                {/* Suggest uncreated page types */}
+                {uncreatedPageTypes.length > 0 && (
+                  <Card>
+                    <BlockStack gap="300">
+                      <Text as="h3" variant="headingMd">
+                        他のページも作成しませんか？
+                      </Text>
+                      {uncreatedPageTypes.map((pt) => {
+                        const isPaid = pt.requiredPlan !== undefined && pt.requiredPlan !== "free";
+                        return (
+                          <InlineStack key={pt.type} align="space-between" blockAlign="center">
+                            <BlockStack gap="100">
+                              <InlineStack gap="200" blockAlign="center">
+                                <Text as="p" variant="bodyMd" fontWeight="semibold">
+                                  {pt.shopifyPageTitle}
+                                </Text>
+                                {isPaid && !hasPaidPlan && (
+                                  <Badge tone="info">有料プラン</Badge>
+                                )}
+                              </InlineStack>
+                              <Text as="p" variant="bodySm" tone="subdued">
+                                {pt.description}
+                              </Text>
+                            </BlockStack>
+                            <Button onClick={() => navigate(`/app/wizard/${pt.type}`)}>
+                              {isPaid && !hasPaidPlan ? "アップグレード" : "作成する"}
+                            </Button>
+                          </InlineStack>
+                        );
+                      })}
+                    </BlockStack>
+                  </Card>
                 )}
               </BlockStack>
             )}
