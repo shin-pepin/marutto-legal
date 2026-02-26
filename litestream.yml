@@ -1,0 +1,12 @@
+dbs:
+  - path: /data/marutto-legal.sqlite
+    replicas:
+      - type: s3
+        bucket: ${LITESTREAM_REPLICA_BUCKET}
+        path: marutto-legal
+        endpoint: ${LITESTREAM_REPLICA_ENDPOINT}
+        region: ${LITESTREAM_REPLICA_REGION}
+        access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+        secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
+        retention: 168h
+        sync-interval: 1s

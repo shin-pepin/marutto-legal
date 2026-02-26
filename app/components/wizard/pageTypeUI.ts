@@ -3,6 +3,10 @@ import { Step1BusinessInfo } from "./Step1BusinessInfo";
 import { Step2SalesConditions } from "./Step2SalesConditions";
 import { Step1BasicInfo } from "./privacy/Step1BasicInfo";
 import { Step2DataCollection } from "./privacy/Step2DataCollection";
+import { Step1BasicInfo as TermsStep1BasicInfo } from "./terms/Step1BasicInfo";
+import { Step2TermsDetails } from "./terms/Step2TermsDetails";
+import { Step1BasicInfo as ReturnStep1BasicInfo } from "./return/Step1BasicInfo";
+import { Step2ReturnDetails } from "./return/Step2ReturnDetails";
 import { getPageTypeConfig } from "../../lib/pageTypes/registry";
 
 export interface WizardStepProps {
@@ -20,6 +24,8 @@ export interface WizardStepProps {
 const PAGE_TYPE_STEPS: Record<string, ComponentType<WizardStepProps>[]> = {
   tokushoho: [Step1BusinessInfo, Step2SalesConditions],
   privacy: [Step1BasicInfo, Step2DataCollection],
+  terms: [TermsStep1BasicInfo, Step2TermsDetails],
+  return: [ReturnStep1BasicInfo, Step2ReturnDetails],
 };
 
 /**
