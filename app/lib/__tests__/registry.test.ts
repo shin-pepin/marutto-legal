@@ -3,6 +3,7 @@ import {
   getPageTypeConfig,
   getAllPageTypes,
   isValidPageType,
+  registerPageType,
 } from "../pageTypes/registry";
 import "../pageTypes"; // register all page types
 
@@ -18,6 +19,21 @@ describe("pageTypes registry", () => {
   it("rejects invalid page types", () => {
     expect(isValidPageType("invalid")).toBe(false);
     expect(isValidPageType("")).toBe(false);
+  });
+
+  it("throws on duplicate registration", () => {
+    expect(() =>
+      registerPageType({
+        type: "tokushoho",
+        title: "duplicate",
+        shopifyPageTitle: "duplicate",
+        handle: "duplicate",
+        stepSchemas: [],
+        fullSchema: {} as any,
+        steps: [],
+        generateHtml: () => "",
+      }),
+    ).toThrow('PageType "tokushoho" is already registered');
   });
 
   it("returns all registered page types", () => {

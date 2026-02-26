@@ -84,6 +84,22 @@ describe("privacyStep1Schema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects invalid siteUrl format", () => {
+    const result = privacyStep1Schema.safeParse({
+      ...validStep1,
+      siteUrl: "not-a-url",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts valid https siteUrl", () => {
+    const result = privacyStep1Schema.safeParse({
+      ...validStep1,
+      siteUrl: "https://example.com",
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("rejects too long businessName", () => {
     const result = privacyStep1Schema.safeParse({
       ...validStep1,

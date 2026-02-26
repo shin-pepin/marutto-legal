@@ -24,6 +24,7 @@ export const privacyStep1Schema = z.object({
   siteUrl: z
     .string()
     .min(1, "サイトURLを入力してください")
+    .url("正しいURLを入力してください（例: https://example.com）")
     .max(MAX_TEXT_LENGTH),
 });
 

@@ -20,6 +20,7 @@ import { getLegalPages, markDeletedOnShopify } from "../lib/db/legalPage.server"
 import { PageCard } from "../components/dashboard/PageCard";
 import { withRetry, hasRetryableGraphQLError } from "../lib/shopify/retry.server";
 import { checkPlanAccess } from "../lib/requirePlan.server";
+import type { BillingCheckContext } from "../lib/requirePlan.server";
 
 const PAGE_TYPE_LABELS: Record<string, string> = {
   tokushoho: "特定商取引法に基づく表記",
@@ -41,7 +42,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   await ensureStore(shop);
 
   // Check if user has Basic plan
-  const hasPaidPlan = await checkPlanAccess(billing, "basic");
+  const hasPaidPlan = await checkPlanAccess(billing as BillingCheckContext, "basic");
   let pages = await getLegalPages(shop);
 
   // T1-4: Check if published pages still exist on Shopify
@@ -142,7 +143,6 @@ export default function DashboardPage() {
                 {pages.map((page) => (
                   <PageCard
                     key={page.id}
-                    pageType={page.pageType}
                     pageTypeLabel={
                       PAGE_TYPE_LABELS[page.pageType] || page.pageType
                     }

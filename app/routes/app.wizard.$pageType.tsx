@@ -30,7 +30,8 @@ import {
   OptimisticLockError,
 } from "../lib/db/legalPage.server";
 import { createPage, updatePage, getPage } from "../lib/shopify/pages.server";
-import { checkPlanAccess } from "../lib/requirePlan.server";
+import { checkPlanAccess, IS_TEST_BILLING } from "../lib/requirePlan.server";
+import type { BillingCheckContext } from "../lib/requirePlan.server";
 import { getPageTypeConfig, isValidPageType } from "../lib/pageTypes/registry";
 import "../lib/pageTypes";
 import type { PageType } from "../types/wizard";
@@ -44,10 +45,13 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     throw new Response("Not Found", { status: 404 });
   }
 
-  const config = getPageTypeConfig(pageType)!;
+  const config = getPageTypeConfig(pageType);
+  if (!config) {
+    throw new Response("Not Found", { status: 404 });
+  }
 
   // Check billing plan access
-  const hasAccess = await checkPlanAccess(billing, config.requiredPlan || "free");
+  const hasAccess = await checkPlanAccess(billing as BillingCheckContext, config.requiredPlan || "free");
 
   await ensureStore(shop);
   const existingPage = await getLegalPage(shop, pageType);
@@ -86,22 +90,41 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     throw new Response("Not Found", { status: 404 });
   }
 
-  const config = getPageTypeConfig(pageType)!;
+  const config = getPageTypeConfig(pageType);
+  if (!config) {
+    throw new Response("Not Found", { status: 404 });
+  }
+
   const formPayload = await request.formData();
   const intent = formPayload.get("intent") as string;
 
   if (intent === "upgrade") {
     return billing.request({
       plan: BASIC_PLAN,
-      isTest: true,
+      isTest: IS_TEST_BILLING,
     });
+  }
+
+  // Server-side billing guard: prevent unpaid access to paid pageTypes
+  const requiredPlan = config.requiredPlan || "free";
+  if (requiredPlan !== "free") {
+    const hasAccess = await checkPlanAccess(billing as BillingCheckContext, requiredPlan);
+    if (!hasAccess) {
+      return json(
+        { success: false, intent, error: "このページタイプにはBasicプランが必要です。" },
+        { status: 403 },
+      );
+    }
   }
 
   const MAX_FORM_DATA_SIZE = 100_000; // 100KB
 
   if (intent === "save-draft") {
-    const formDataJson = formPayload.get("formData") as string;
-    if (formDataJson && formDataJson.length > MAX_FORM_DATA_SIZE) {
+    const formDataJson = formPayload.get("formData") as string | null;
+    if (!formDataJson) {
+      return json({ success: false, intent: "save-draft", error: "Form data is required" }, { status: 400 });
+    }
+    if (formDataJson.length > MAX_FORM_DATA_SIZE) {
       return json({ success: false, intent: "save-draft", error: "Form data too large" }, { status: 400 });
     }
     const versionStr = formPayload.get("version") as string | null;
@@ -118,8 +141,11 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   }
 
   if (intent === "publish") {
-    const formDataJson = formPayload.get("formData") as string;
-    if (formDataJson && formDataJson.length > MAX_FORM_DATA_SIZE) {
+    const formDataJson = formPayload.get("formData") as string | null;
+    if (!formDataJson) {
+      return json({ success: false, intent: "publish", error: "Form data is required" }, { status: 400 });
+    }
+    if (formDataJson.length > MAX_FORM_DATA_SIZE) {
       return json({ success: false, intent: "publish", error: "Form data too large" }, { status: 400 });
     }
     let formData: unknown;
@@ -147,7 +173,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     // Generate HTML
     const contentHtml = config.generateHtml(normalized as Record<string, unknown>);
 
-    // Check if we're updating or creating
+    // Check if we're updating or creating on Shopify
     const existingPage = await getLegalPage(shop, pageType);
     let shopifyPageId: string;
     let pageHandle: string | undefined;
@@ -161,6 +187,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         shopifyPageId = existingPage.shopifyPageId;
         pageHandle = page.handle;
       } else {
+        // Page was deleted on Shopify — recreate
         const result = await createPage(admin, {
           title: config.shopifyPageTitle,
           handle: config.handle,
@@ -213,7 +240,10 @@ export default function WizardPage() {
     useLoaderData<typeof loader>();
 
   const navigate = useNavigate();
-  const config = getPageTypeConfig(pageType)!;
+  const config = getPageTypeConfig(pageType);
+  if (!config) {
+    throw new Error(`Unknown pageType: ${pageType}`);
+  }
   const totalSteps = config.steps.length;
   const stepComponents = getStepComponents(pageType);
 
@@ -241,6 +271,15 @@ export default function WizardPage() {
   pageVersionRef.current = pageVersion;
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
   const [isDirty, setIsDirty] = useState(false);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, []);
 
   const isPublishing =
     fetcher.state !== "idle" &&
