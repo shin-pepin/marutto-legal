@@ -25,13 +25,15 @@ import { getStepComponents } from "../components/wizard/pageTypeUI";
 import { ensureStore } from "../lib/db/store.server";
 import {
   getLegalPage,
+  getLegalPageMeta,
   upsertLegalPageDraft,
   publishLegalPage,
+  checkVersionOrThrow,
   OptimisticLockError,
 } from "../lib/db/legalPage.server";
 import { createPage, updatePage, getPage } from "../lib/shopify/pages.server";
 import { checkPlanAccess, IS_TEST_BILLING } from "../lib/requirePlan.server";
-import type { BillingCheckContext } from "../lib/requirePlan.server";
+import type { BillingCheckContext, PlanLevel } from "../lib/requirePlan.server";
 import { getPageTypeConfig, isValidPageType } from "../lib/pageTypes/registry";
 import "../lib/pageTypes";
 import type { PageType } from "../types/wizard";
@@ -173,8 +175,21 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     // Generate HTML
     const contentHtml = config.generateHtml(normalized as Record<string, unknown>);
 
-    // Check if we're updating or creating on Shopify
-    const existingPage = await getLegalPage(shop, pageType);
+    // Pre-check optimistic lock BEFORE calling Shopify API
+    // This prevents Shopify page creation/update when the DB version is stale.
+    const versionStr = formPayload.get("version") as string | null;
+    const expectedVersion = versionStr ? parseInt(versionStr, 10) : undefined;
+    try {
+      await checkVersionOrThrow(shop, pageType as PageType, expectedVersion);
+    } catch (error) {
+      if (error instanceof OptimisticLockError) {
+        return json({ success: false, intent: "publish", error: error.message }, { status: 409 });
+      }
+      throw error;
+    }
+
+    // Version check passed — now safe to call Shopify API
+    const existingPage = await getLegalPageMeta(shop, pageType as PageType);
     let shopifyPageId: string;
     let pageHandle: string | undefined;
 
@@ -208,9 +223,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       pageHandle = result.handle;
     }
 
-    // Save to DB with optimistic lock
-    const versionStr = formPayload.get("version") as string | null;
-    const expectedVersion = versionStr ? parseInt(versionStr, 10) : undefined;
+    // Save to DB with optimistic lock (double-check, race window is now minimal)
     try {
       const published = await publishLegalPage(shop, pageType as PageType, {
         shopifyPageId,

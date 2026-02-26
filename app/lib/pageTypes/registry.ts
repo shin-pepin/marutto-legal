@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { ZodSchema } from "zod";
 import type { PageType } from "../../types/wizard";
+import type { PlanLevel } from "../requirePlan.server";
 
 /**
  * Step definition: label shown in stepper + React component to render.
@@ -17,6 +18,8 @@ export interface PageTypeConfig {
   type: PageType;
   /** Title shown in wizard header and page creation */
   title: string;
+  /** Short description for dashboard display */
+  description: string;
   /** Shopify page title */
   shopifyPageTitle: string;
   /** Shopify page handle (URL slug) */
@@ -34,7 +37,7 @@ export interface PageTypeConfig {
   /** Collapsible sections config (section keys with default open state) */
   sections?: Record<string, boolean>;
   /** Required billing plan ("free" = no billing required) */
-  requiredPlan?: string;
+  requiredPlan?: PlanLevel;
 }
 
 const registry = new Map<string, PageTypeConfig>();

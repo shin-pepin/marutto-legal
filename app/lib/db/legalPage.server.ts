@@ -13,7 +13,7 @@ function decryptPageFormData<T extends { formData: string | null }>(page: T): T 
 }
 
 /**
- * Get a legal page by store and page type.
+ * Get a legal page by store and page type (with decrypted formData).
  */
 export async function getLegalPage(storeId: string, pageType: PageType) {
   const page = await db.legalPage.findUnique({
@@ -22,6 +22,42 @@ export async function getLegalPage(storeId: string, pageType: PageType) {
     },
   });
   return page ? decryptPageFormData(page) : null;
+}
+
+/**
+ * Get page metadata (id, version, shopifyPageId, status) without decrypting formData.
+ * Use this when you only need metadata (e.g., for optimistic lock checks).
+ */
+export async function getLegalPageMeta(storeId: string, pageType: PageType) {
+  return db.legalPage.findUnique({
+    where: {
+      storeId_pageType: { storeId, pageType },
+    },
+    select: {
+      id: true,
+      version: true,
+      shopifyPageId: true,
+      status: true,
+    },
+  });
+}
+
+/**
+ * Pre-check optimistic lock version before external API calls.
+ * Throws OptimisticLockError if the version doesn't match.
+ */
+export async function checkVersionOrThrow(
+  storeId: string,
+  pageType: PageType,
+  expectedVersion: number | undefined,
+): Promise<void> {
+  if (expectedVersion === undefined) return;
+  const meta = await getLegalPageMeta(storeId, pageType);
+  if (meta && meta.version !== expectedVersion) {
+    throw new OptimisticLockError(
+      "このページは別のセッションで更新されています。再読み込みしてください。",
+    );
+  }
 }
 
 /**
@@ -45,7 +81,7 @@ export async function upsertLegalPageDraft(
   formData: string,
   expectedVersion?: number,
 ) {
-  const existing = await getLegalPage(storeId, pageType);
+  const existing = await getLegalPageMeta(storeId, pageType);
 
   const encryptedFormData = formData != null ? encryptFormData(formData) : formData;
 
@@ -105,7 +141,7 @@ export async function publishLegalPage(
     formData: encryptFormData(data.formData),
   };
 
-  const existing = await getLegalPage(storeId, pageType);
+  const existing = await getLegalPageMeta(storeId, pageType);
 
   if (existing) {
     if (expectedVersion !== undefined) {

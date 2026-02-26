@@ -21,19 +21,8 @@ import { PageCard } from "../components/dashboard/PageCard";
 import { withRetry, hasRetryableGraphQLError } from "../lib/shopify/retry.server";
 import { checkPlanAccess } from "../lib/requirePlan.server";
 import type { BillingCheckContext } from "../lib/requirePlan.server";
-
-const PAGE_TYPE_LABELS: Record<string, string> = {
-  tokushoho: "特定商取引法に基づく表記",
-  privacy: "プライバシーポリシー",
-  terms: "利用規約",
-  return: "返品・交換ポリシー",
-};
-
-// Page types available for creation
-const AVAILABLE_PAGE_TYPES = [
-  { type: "tokushoho", label: "特定商取引法に基づく表記", description: "ECサイトに必須の法的表記ページ" },
-  { type: "privacy", label: "プライバシーポリシー", description: "個人情報の取り扱いに関するポリシーページ" },
-];
+import { getAllPageTypes } from "../lib/pageTypes/registry";
+import "../lib/pageTypes";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, billing, session } = await authenticate.admin(request);
@@ -103,9 +92,10 @@ export default function DashboardPage() {
   const { pages, hasPaidPlan } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
 
+  const allPageTypes = getAllPageTypes();
   const hasPages = pages.length > 0;
   const existingPageTypes = new Set(pages.map((p) => p.pageType));
-  const uncreatedPageTypes = AVAILABLE_PAGE_TYPES.filter(
+  const uncreatedPageTypes = allPageTypes.filter(
     (pt) => !existingPageTypes.has(pt.type),
   );
 
@@ -140,18 +130,21 @@ export default function DashboardPage() {
               </EmptyState>
             ) : (
               <BlockStack gap="400">
-                {pages.map((page) => (
+                {pages.map((page) => {
+                  const ptConfig = allPageTypes.find((pt) => pt.type === page.pageType);
+                  return (
                   <PageCard
                     key={page.id}
                     pageTypeLabel={
-                      PAGE_TYPE_LABELS[page.pageType] || page.pageType
+                      ptConfig?.shopifyPageTitle || page.pageType
                     }
                     status={page.status}
                     updatedAt={page.updatedAt}
                     shopifyPageId={page.shopifyPageId}
                     onEdit={() => navigate(`/app/wizard/${page.pageType}`)}
                   />
-                ))}
+                  );
+                })}
 
                 {/* Suggest uncreated page types */}
                 {uncreatedPageTypes.length > 0 && (
@@ -161,13 +154,13 @@ export default function DashboardPage() {
                         他のページも作成しませんか？
                       </Text>
                       {uncreatedPageTypes.map((pt) => {
-                        const isPaid = pt.type !== "tokushoho";
+                        const isPaid = pt.requiredPlan !== undefined && pt.requiredPlan !== "free";
                         return (
                           <InlineStack key={pt.type} align="space-between" blockAlign="center">
                             <BlockStack gap="100">
                               <InlineStack gap="200" blockAlign="center">
                                 <Text as="p" variant="bodyMd" fontWeight="semibold">
-                                  {pt.label}
+                                  {pt.shopifyPageTitle}
                                 </Text>
                                 {isPaid && !hasPaidPlan && (
                                   <Badge tone="info">有料プラン</Badge>

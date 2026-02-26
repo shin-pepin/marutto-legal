@@ -6,6 +6,7 @@ import type { TokushohoFormData } from "../../types/wizard";
 registerPageType({
   type: "tokushoho",
   title: "特商法ページ作成",
+  description: "ECサイトに必須の法的表記ページ",
   shopifyPageTitle: "特定商取引法に基づく表記",
   handle: "legal",
   stepSchemas: [step1Schema, step2Schema],

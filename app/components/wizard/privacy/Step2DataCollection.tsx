@@ -11,15 +11,9 @@ import {
   COLLECTED_INFO_OPTIONS,
   PURPOSE_OF_USE_OPTIONS,
 } from "../../../lib/validation/privacy";
+import type { WizardStepProps } from "../pageTypeUI";
 
-interface Step2Props {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  formData: Record<string, any>;
-  errors: Record<string, string>;
-  onChange: (field: string, value: string | string[]) => void;
-}
-
-export function Step2DataCollection({ formData, errors, onChange }: Step2Props) {
+export function Step2DataCollection({ formData, errors, onChange }: WizardStepProps) {
   return (
     <BlockStack gap="400">
       <Card>

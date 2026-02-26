@@ -9,15 +9,9 @@ import {
   Banner,
   Box,
 } from "@shopify/polaris";
-import type { TokushohoFormData } from "../../types/wizard";
+import type { WizardStepProps } from "./pageTypeUI";
 
-interface Step1Props {
-  formData: Partial<TokushohoFormData>;
-  errors: Record<string, string>;
-  onChange: (field: string, value: string) => void;
-}
-
-export function Step1BusinessInfo({ formData, errors, onChange }: Step1Props) {
+export function Step1BusinessInfo({ formData, errors, onChange }: WizardStepProps) {
   return (
     <BlockStack gap="400">
       <Card>

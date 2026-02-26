@@ -6,6 +6,7 @@ import type { PrivacyFormData } from "../validation/privacy";
 registerPageType({
   type: "privacy",
   title: "プライバシーポリシー作成",
+  description: "個人情報の取り扱いに関するポリシーページ",
   shopifyPageTitle: "プライバシーポリシー",
   handle: "privacy-policy",
   stepSchemas: [privacyStep1Schema, privacyStep2Schema],

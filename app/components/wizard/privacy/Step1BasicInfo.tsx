@@ -5,15 +5,9 @@ import {
   Card,
   Text,
 } from "@shopify/polaris";
+import type { WizardStepProps } from "../pageTypeUI";
 
-interface Step1Props {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  formData: Record<string, any>;
-  errors: Record<string, string>;
-  onChange: (field: string, value: string) => void;
-}
-
-export function Step1BasicInfo({ formData, errors, onChange }: Step1Props) {
+export function Step1BasicInfo({ formData, errors, onChange }: WizardStepProps) {
   return (
     <BlockStack gap="400">
       <Card>

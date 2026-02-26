@@ -1,5 +1,8 @@
 import { BASIC_PLAN } from "../shopify.server";
 
+/** Supported billing plan levels. */
+export type PlanLevel = "free" | "basic";
+
 /**
  * Whether billing operations should run in test mode.
  * Defaults to true in development, false in production.
@@ -17,25 +20,39 @@ export interface BillingCheckContext {
 }
 
 /**
+ * Maps plan level to Shopify billing plan name(s).
+ * When adding new plans, extend both PlanLevel and this map.
+ */
+const PLAN_MAP: Record<Exclude<PlanLevel, "free">, string[]> = {
+  basic: [BASIC_PLAN],
+};
+
+/**
  * Check if the current store has access to the required plan.
  * Uses Shopify's billing.check() to verify active subscription.
  */
 export async function checkPlanAccess(
   billing: BillingCheckContext,
-  requiredPlan: string,
+  requiredPlan: PlanLevel,
 ): Promise<boolean> {
-  if (!requiredPlan || requiredPlan === "free") {
+  if (requiredPlan === "free") {
     return true;
+  }
+
+  const plans = PLAN_MAP[requiredPlan];
+  if (!plans) {
+    console.error(`[billing] Unknown plan level: ${requiredPlan}`);
+    return false;
   }
 
   try {
     const { hasActivePayment } = await billing.check({
-      plans: [BASIC_PLAN],
+      plans,
       isTest: IS_TEST_BILLING,
     });
     return hasActivePayment;
-  } catch {
-    // If billing check fails, deny access to be safe
+  } catch (error) {
+    console.error("[billing] checkPlanAccess failed:", error);
     return false;
   }
 }

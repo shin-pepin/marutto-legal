@@ -15,14 +15,8 @@ export interface WizardStepProps {
 
 // Maps pageType to form step components (preview step is handled generically)
 const PAGE_TYPE_STEPS: Record<string, ComponentType<WizardStepProps>[]> = {
-  tokushoho: [
-    Step1BusinessInfo as ComponentType<WizardStepProps>,
-    Step2SalesConditions as ComponentType<WizardStepProps>,
-  ],
-  privacy: [
-    Step1BasicInfo as ComponentType<WizardStepProps>,
-    Step2DataCollection as ComponentType<WizardStepProps>,
-  ],
+  tokushoho: [Step1BusinessInfo, Step2SalesConditions],
+  privacy: [Step1BasicInfo, Step2DataCollection],
 };
 
 export function getStepComponents(pageType: string): ComponentType<WizardStepProps>[] {

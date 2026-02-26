@@ -26,6 +26,7 @@ describe("pageTypes registry", () => {
       registerPageType({
         type: "tokushoho",
         title: "duplicate",
+        description: "duplicate",
         shopifyPageTitle: "duplicate",
         handle: "duplicate",
         stepSchemas: [],
