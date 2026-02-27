@@ -27,7 +27,7 @@
       border-bottom: 1px solid #e5e5e5;
       padding-bottom: 12px;
     ">
-      {{ block.settings.title | default: section.settings.title }}
+      {{ section.settings.title }}
     </h3>
 
     {% assign quantity_text = shop.metafields["app--confirmation--quantity_text"].value %}
@@ -112,7 +112,58 @@
             >
             <span>{{ checkbox_label }}</span>
           </label>
+          <p id="marutto-confirmation-warning" style="
+            margin: 8px 0 0 0;
+            font-size: 12px;
+            color: #c00;
+            display: none;
+          ">
+            {{ 'confirmation.checkbox_required' | t }}
+          </p>
         </div>
+
+        <script>
+          (function() {
+            var checkbox = document.getElementById('marutto-confirmation-checkbox');
+            var warning = document.getElementById('marutto-confirmation-warning');
+            if (!checkbox) return;
+
+            /* Selectors for common checkout/submit buttons on the cart page */
+            var BTN_SELECTORS = [
+              '[name="checkout"]',
+              'button[type="submit"][name="checkout"]',
+              'input[type="submit"][name="checkout"]',
+              '.shopify-payment-button button',
+              '.cart__checkout-button',
+              '[data-shopify="payment-button"] button'
+            ].join(',');
+
+            function getButtons() {
+              return document.querySelectorAll(BTN_SELECTORS);
+            }
+
+            function toggle() {
+              var checked = checkbox.checked;
+              var buttons = getButtons();
+              for (var i = 0; i < buttons.length; i++) {
+                buttons[i].disabled = !checked;
+                buttons[i].style.opacity = checked ? '' : '0.5';
+                buttons[i].style.pointerEvents = checked ? '' : 'none';
+              }
+              warning.style.display = checked ? 'none' : 'block';
+            }
+
+            checkbox.addEventListener('change', toggle);
+
+            /* Initial state: buttons disabled until checked */
+            toggle();
+
+            /* Re-apply after DOM changes (dynamic cart updates) */
+            var observer = new MutationObserver(function() { toggle(); });
+            var cart = document.querySelector('form[action="/cart"]') || document.body;
+            observer.observe(cart, { childList: true, subtree: true });
+          })();
+        </script>
       {% endif %}
     {% endif %}
   </div>

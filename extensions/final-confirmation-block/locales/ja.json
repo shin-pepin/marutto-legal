@@ -5,6 +5,7 @@
     "payment_label": "支払方法・時期",
     "delivery_label": "引渡時期",
     "cancellation_label": "申込みの撤回・解除に関する事項",
-    "period_label": "申込期間"
+    "period_label": "申込期間",
+    "checkbox_required": "ご注文手続きを進めるには、上記の内容をご確認の上チェックを入れてください。"
   }
 }

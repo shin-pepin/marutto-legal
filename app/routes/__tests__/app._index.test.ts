@@ -60,11 +60,20 @@ vi.mock("../../lib/db/store.server", () => ({
   ensureStore: (...args: unknown[]) => mockEnsureStore(...args),
 }));
 
+// Real OptimisticLockError class so instanceof checks work in the action
+const MockOptimisticLockError = class OptimisticLockError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "OptimisticLockError";
+  }
+};
+
 vi.mock("../../lib/db/legalPage.server", () => ({
   getLegalPages: (...args: unknown[]) => mockGetLegalPages(...args),
   getLegalPage: (...args: unknown[]) => mockGetLegalPage(...args),
   markDeletedOnShopify: (...args: unknown[]) => mockMarkDeletedOnShopify(...args),
   updateLegalPageVersion: (...args: unknown[]) => mockUpdateLegalPageVersion(...args),
+  OptimisticLockError: MockOptimisticLockError,
 }));
 
 vi.mock("../../lib/requirePlan.server", () => ({
@@ -440,6 +449,52 @@ describe("Dashboard action - apply-template-update", () => {
     expect(response.status).toBe(400);
     expect(data.success).toBe(false);
     expect((data as { redirectTo?: string }).redirectTo).toBe("/app/wizard/tokushoho");
+  });
+
+  it("returns 409 on optimistic lock conflict", async () => {
+    mockGetPage.mockResolvedValue({ id: "gid://shopify/Page/1", handle: "legal" });
+    mockGetLegalPage.mockResolvedValue({
+      id: "page-1",
+      pageType: "tokushoho",
+      status: "published",
+      shopifyPageId: "gid://shopify/Page/1",
+      formData: JSON.stringify({
+        businessName: "テスト社",
+        representativeName: "テスト太郎",
+        address: "東京都渋谷区1-1-1",
+        email: "test@test.com",
+        phone: "03-1234-5678",
+        postalCode: "100-0001",
+        businessType: "corporation",
+        addressDisclosure: "public",
+        sellingPrice: "商品ページに記載",
+        additionalFees: "送料500円",
+        paymentMethods: ["credit_card"],
+        paymentTiming: "注文時",
+        deliveryTime: "3営業日以内",
+        deliveryNotes: "",
+        returnPolicy: "商品到着後7日以内",
+        returnDeadline: "7日以内",
+        returnShippingCost: "お客様負担",
+        defectiveItemPolicy: "交換対応",
+        quantityLimit: "",
+      }),
+      formSchemaVersion: 1,
+      version: 3,
+    });
+    // Simulate optimistic lock failure
+    mockUpdateLegalPageVersion.mockRejectedValue(
+      new MockOptimisticLockError("このページは別のセッションで更新されています。再読み込みしてください。"),
+    );
+
+    const args = buildActionArgs({
+      intent: "apply-template-update",
+      pageType: "tokushoho",
+    });
+    const response = await action(args);
+    expect(response.status).toBe(409);
+    const data = await response.json();
+    expect(data.success).toBe(false);
   });
 
   it("redirects to wizard when formData fails schema validation", async () => {

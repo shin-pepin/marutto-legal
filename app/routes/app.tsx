@@ -23,6 +23,7 @@ export default function App() {
         <Link to="/app" rel="home">
           ダッシュボード
         </Link>
+        {/* Intentionally visible to all users as upsell funnel — page itself shows upgrade prompt */}
         <Link to="/app/confirmation">最終確認画面設定</Link>
       </NavMenu>
       <Outlet />

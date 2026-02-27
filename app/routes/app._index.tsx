@@ -24,6 +24,7 @@ import type { BillingCheckContext } from "../lib/requirePlan.server";
 import { getAllPageTypes, getPageTypeConfig, getTemplateUpdates } from "../lib/pageTypes/registry";
 import type { VersionHistoryEntry } from "../lib/pageTypes/registry";
 import { updatePage, getPage, createPage } from "../lib/shopify/pages.server";
+import { OptimisticLockError } from "../lib/db/legalPage.server";
 import "../lib/pageTypes";
 import type { PageType } from "../types/wizard";
 
@@ -222,10 +223,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     // Update DB: new contentHtml + formSchemaVersion + optional new shopifyPageId
     // H-1: Use optimistic locking via expectedVersion
-    await updateLegalPageVersion(page.id, config.templateVersion, contentHtml, {
-      shopifyPageId: newShopifyPageId,
-      expectedVersion: page.version,
-    });
+    try {
+      await updateLegalPageVersion(page.id, config.templateVersion, contentHtml, {
+        shopifyPageId: newShopifyPageId,
+        expectedVersion: page.version,
+      });
+    } catch (error) {
+      if (error instanceof OptimisticLockError) {
+        return json<ActionResponse>({
+          success: false,
+          error: "このページは別のセッションで更新されています。ページを再読み込みしてください。",
+        }, { status: 409 });
+      }
+      throw error;
+    }
 
     return json<ActionResponse>({ success: true, intent: "apply-template-update" });
   }
@@ -262,7 +273,8 @@ export default function DashboardPage() {
     fetcher.data && !fetcher.data.success
       ? (fetcher.data as { success: false; error: string; redirectTo?: string })
       : null;
-  const fetcherSuccess = fetcher.data?.success ?? false;
+  const fetcherSuccess =
+    fetcher.data?.success && "intent" in fetcher.data && fetcher.data.intent === "apply-template-update";
 
   return (
     <Page>

@@ -114,7 +114,7 @@ export async function getConfirmationMetafields(
       `#graphql
       query getShopMetafields($namespace: String!, $keys: [String!]!) {
         shop {
-          metafields(namespace: $namespace, keys: $keys, first: 10) {
+          metafields(namespace: $namespace, keys: $keys, first: 20) {
             edges {
               node {
                 key
