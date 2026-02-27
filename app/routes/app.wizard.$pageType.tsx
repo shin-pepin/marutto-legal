@@ -474,7 +474,7 @@ export default function WizardPage() {
                         Basicプラン
                       </Text>
                       <Text as="p" variant="headingLg">
-                        $6.99 / 月
+                        $4.99 / 月
                       </Text>
                       <Text as="p" tone="subdued" variant="bodySm">
                         7日間の無料トライアル付き
