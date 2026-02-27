@@ -474,7 +474,7 @@ export default function WizardPage() {
                         Basicプラン
                       </Text>
                       <Text as="p" variant="headingLg">
-                        $6.99 / 月
+                        $4.99 / 月
                       </Text>
                       <Text as="p" tone="subdued" variant="bodySm">
                         7日間の無料トライアル付き
@@ -482,8 +482,8 @@ export default function WizardPage() {
                       <List>
                         <List.Item>全ページタイプの作成</List.Item>
                         <List.Item>プライバシーポリシー</List.Item>
-                        <List.Item>利用規約（近日対応）</List.Item>
-                        <List.Item>返品・交換ポリシー（近日対応）</List.Item>
+                        <List.Item>利用規約</List.Item>
+                        <List.Item>返品・交換ポリシー</List.Item>
                       </List>
                     </BlockStack>
                   </Card>

@@ -43,11 +43,6 @@ export interface PageTypeConfig {
 const registry = new Map<string, PageTypeConfig>();
 
 export function registerPageType(config: PageTypeConfig): void {
-  if (registry.has(config.type)) {
-    throw new Error(
-      `PageType "${config.type}" is already registered. Duplicate registration is not allowed.`,
-    );
-  }
   registry.set(config.type, config);
 }
 

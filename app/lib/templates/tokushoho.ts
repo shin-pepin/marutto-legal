@@ -1,4 +1,4 @@
-import { html, safeHtml } from "../sanitize";
+import { html, safeHtml, nlToBr } from "../sanitize";
 import type { TokushohoFormData } from "../validation/wizard";
 import { PAYMENT_METHODS } from "../../types/wizard";
 
@@ -105,12 +105,3 @@ const TH_STYLE =
 const TD_STYLE =
   "border:1px solid #ddd;padding:12px 16px;vertical-align:top;";
 
-/**
- * Convert newlines to <br> tags in escaped text.
- * The input text must already be HTML-escaped via the html`` tag.
- */
-function nlToBr(text: string): string {
-  // First escape the text, then replace newlines
-  const escaped = html`${text}`;
-  return escaped.replace(/\n/g, "<br>");
-}

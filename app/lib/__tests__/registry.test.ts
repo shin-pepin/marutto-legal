@@ -21,20 +21,22 @@ describe("pageTypes registry", () => {
     expect(isValidPageType("")).toBe(false);
   });
 
-  it("throws on duplicate registration", () => {
-    expect(() =>
-      registerPageType({
-        type: "tokushoho",
-        title: "duplicate",
-        description: "duplicate",
-        shopifyPageTitle: "duplicate",
-        handle: "duplicate",
-        stepSchemas: [],
-        fullSchema: {} as any,
-        steps: [],
-        generateHtml: () => "",
-      }),
-    ).toThrow('PageType "tokushoho" is already registered');
+  it("allows re-registration (idempotent for HMR)", () => {
+    const original = getPageTypeConfig("tokushoho");
+    registerPageType({
+      type: "tokushoho",
+      title: "updated",
+      description: "updated",
+      shopifyPageTitle: "updated",
+      handle: "updated",
+      stepSchemas: [],
+      fullSchema: {} as any,
+      steps: [],
+      generateHtml: () => "",
+    });
+    expect(getPageTypeConfig("tokushoho")!.title).toBe("updated");
+    // Restore original to not break other tests
+    if (original) registerPageType(original);
   });
 
   it("returns all registered page types", () => {
