@@ -18,4 +18,6 @@ registerPageType({
   ],
   generateHtml: (data) => generatePrivacyHtml(data as PrivacyFormData),
   requiredPlan: "basic",
+  templateVersion: 1,
+  versionHistory: [{ version: 1, date: "2026-02-27", summary: "初期バージョン" }],
 });

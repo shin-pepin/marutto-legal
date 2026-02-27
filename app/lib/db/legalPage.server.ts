@@ -124,6 +124,7 @@ export async function upsertLegalPageDraft(
 /**
  * Publish a legal page (update with generated HTML and Shopify page ID).
  * Uses optimistic locking via version field.
+ * Optionally sets formSchemaVersion (template version at publish time).
  */
 export async function publishLegalPage(
   storeId: string,
@@ -132,12 +133,15 @@ export async function publishLegalPage(
     shopifyPageId: string;
     contentHtml: string;
     formData: string;
+    formSchemaVersion?: number;
   },
   expectedVersion?: number,
 ) {
+  const { formSchemaVersion, ...rest } = data;
   const encryptedData = {
-    ...data,
-    formData: encryptFormData(data.formData),
+    ...rest,
+    formData: encryptFormData(rest.formData),
+    ...(formSchemaVersion !== undefined ? { formSchemaVersion } : {}),
   };
 
   const existing = await getLegalPageMeta(storeId, pageType);
@@ -185,6 +189,49 @@ export async function publishLegalPage(
       ...encryptedData,
       status: "published",
     },
+  });
+}
+
+/**
+ * Update a published legal page's content and formSchemaVersion.
+ * Used by template update flow (re-generate from existing formData).
+ * Optionally updates shopifyPageId (e.g., when Shopify page was recreated).
+ * Uses optimistic locking via expectedVersion.
+ */
+export async function updateLegalPageVersion(
+  pageId: string,
+  newVersion: number,
+  contentHtml: string,
+  options?: { shopifyPageId?: string; expectedVersion?: number },
+) {
+  const data: Record<string, unknown> = {
+    contentHtml,
+    formSchemaVersion: newVersion,
+    version: { increment: 1 },
+  };
+  if (options?.shopifyPageId !== undefined) {
+    data.shopifyPageId = options.shopifyPageId;
+  }
+
+  if (options?.expectedVersion !== undefined) {
+    const result = await db.legalPage.updateMany({
+      where: { id: pageId, version: options.expectedVersion },
+      data: {
+        ...data,
+        version: options.expectedVersion + 1,
+      },
+    });
+    if (result.count === 0) {
+      throw new OptimisticLockError(
+        "このページは別のセッションで更新されています。再読み込みしてください。",
+      );
+    }
+    return db.legalPage.findUniqueOrThrow({ where: { id: pageId } });
+  }
+
+  return db.legalPage.update({
+    where: { id: pageId },
+    data,
   });
 }
 
