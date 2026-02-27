@@ -14,6 +14,8 @@ ENV DATABASE_URL="file:/data/marutto-legal.sqlite"
 EXPOSE 3000
 
 # Install Litestream v0.3.13 (multi-arch with checksum verification)
+# Checksums from official release: https://github.com/benbjohnson/litestream/releases/tag/v0.3.13
+# Do not override in production builds.
 ARG TARGETARCH
 ARG LITESTREAM_SHA256_AMD64="eb75a3de5cab03875cdae9f5f539e6aedadd66607003d9b1e7a9077948818ba0"
 ARG LITESTREAM_SHA256_ARM64="9585f5a508516bd66af2b2376bab4de256a5ef8e2b73ec760559e679628f2d59"

@@ -286,6 +286,19 @@ describe("returnFormSchema", () => {
     const result = returnFormSchema.safeParse(validStep1);
     expect(result.success).toBe(false);
   });
+
+  it("validates complete form with no_returns and empty optional fields", () => {
+    const result = returnFormSchema.safeParse({
+      ...validStep1,
+      ...validStep2,
+      returnCondition: "no_returns",
+      returnDeadline: "",
+      refundTiming: "",
+      defectiveHandling: "",
+      returnProcess: "",
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("validateReturnStep", () => {

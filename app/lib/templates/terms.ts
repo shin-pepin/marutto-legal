@@ -1,4 +1,4 @@
-import { html, safeHtml, nlToBr, getLabelFromOptions } from "../sanitize";
+import { html, safeHtml, nlToBr, getLabelFromOptions, escapeHtml } from "../sanitize";
 import type { TermsFormData } from "../validation/terms";
 import { PROHIBITED_ACTIONS_OPTIONS, JURISDICTION_OPTIONS } from "../validation/terms";
 
@@ -20,7 +20,7 @@ export function generateTermsHtml(data: TermsFormData): string {
     : "";
 
   const jurisdictionLabel = data.jurisdiction === "other" && data.jurisdictionOther
-    ? html`${data.jurisdictionOther}`
+    ? escapeHtml(data.jurisdictionOther)
     : getLabelFromOptions(JURISDICTION_OPTIONS, data.jurisdiction);
 
   return html`<div style="max-width:800px;margin:0 auto;">
