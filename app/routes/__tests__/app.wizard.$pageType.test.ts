@@ -115,6 +115,42 @@ vi.mock("../../lib/shopify/retry.server", () => ({
 const { loader, action } = await import("../app.wizard.$pageType");
 const { OptimisticLockError } = await import("../../lib/db/legalPage.server");
 
+// Valid terms form data (paid plan)
+const validTermsFormData = JSON.stringify({
+  businessName: "株式会社テスト",
+  serviceName: "テストサービス",
+  siteUrl: "https://test.example.com",
+  email: "test@example.com",
+  registrationRequirement: "18歳以上であること",
+  prohibitedActions: ["illegal", "ip_infringement"],
+  prohibitedActionsOther: "",
+  intellectualProperty: "当社に帰属します",
+  disclaimer: "当社は責任を負いません",
+  serviceInterruption: "事前に通知します",
+  termsChangePolicy: "変更後に通知します",
+  jurisdiction: "tokyo",
+  jurisdictionOther: "",
+  contactMethod: "メールにてお問い合わせください",
+});
+
+// Valid return form data (paid plan)
+const validReturnFormData = JSON.stringify({
+  businessName: "株式会社テスト",
+  email: "test@example.com",
+  phone: "03-1234-5678",
+  siteUrl: "https://test.example.com",
+  returnDeadline: "商品到着後7日以内",
+  returnCondition: "both",
+  shippingCost: "defective_store",
+  exchangePolicy: "defective_only",
+  refundMethod: "original_payment",
+  refundTiming: "返品確認後14日以内",
+  defectiveHandling: "送料当店負担で交換いたします",
+  returnProcess: "メールにてご連絡ください",
+  nonReturnableItems: "",
+  contactMethod: "メールにてお問い合わせください",
+});
+
 // Valid tokushoho form data matching the ACTUAL schema (free plan)
 const validTokushohoFormData = JSON.stringify({
   // Step 1
@@ -378,5 +414,199 @@ describe("Wizard action - upgrade (app.wizard.$pageType)", () => {
     expect(mockBilling.request).toHaveBeenCalledWith(
       expect.objectContaining({ plan: "Basic" }),
     );
+  });
+});
+
+// --- Terms page type tests ---
+
+describe("Wizard loader - terms", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetLegalPage.mockResolvedValue(null);
+    mockCheckPlanAccess.mockResolvedValue(true);
+    mockBilling.check.mockResolvedValue({ hasActivePayment: true });
+  });
+
+  it("returns empty formData for new terms page", async () => {
+    const args = buildLoaderArgs({ params: { pageType: "terms" } });
+    const response = await loader(args);
+    const data = await response.json();
+
+    expect(data.formData).toEqual({});
+    expect(data.pageType).toBe("terms");
+  });
+
+  it("returns needsUpgrade true when billing fails for terms", async () => {
+    mockCheckPlanAccess.mockResolvedValue(false);
+
+    const args = buildLoaderArgs({ params: { pageType: "terms" } });
+    const response = await loader(args);
+    const data = await response.json();
+
+    expect(data.needsUpgrade).toBe(true);
+  });
+});
+
+describe("Wizard action - terms save-draft", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCheckPlanAccess.mockResolvedValue(true);
+    mockUpsertLegalPageDraft.mockResolvedValue({ version: 2 });
+  });
+
+  it("saves terms draft successfully", async () => {
+    const args = buildActionArgs(
+      { intent: "save-draft", formData: validTermsFormData, version: "1" },
+      { params: { pageType: "terms" } },
+    );
+    const response = await action(args);
+    const data = await response.json();
+
+    expect(data.success).toBe(true);
+    expect(data.intent).toBe("save-draft");
+  });
+});
+
+describe("Wizard action - terms publish", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCheckPlanAccess.mockResolvedValue(true);
+    mockCheckVersionOrThrow.mockResolvedValue(undefined);
+    mockGetLegalPageMeta.mockResolvedValue(null);
+    mockCreatePage.mockResolvedValue({ pageId: "gid://shopify/Page/new", handle: "terms" });
+    mockPublishLegalPage.mockResolvedValue({ version: 2 });
+  });
+
+  it("publishes terms page successfully", async () => {
+    const args = buildActionArgs(
+      { intent: "publish", formData: validTermsFormData },
+      { params: { pageType: "terms" } },
+    );
+    const response = await action(args);
+    const data = await response.json();
+
+    expect(data.success).toBe(true);
+    expect(data.intent).toBe("publish");
+  });
+
+  it("returns validation errors for invalid terms data", async () => {
+    const args = buildActionArgs(
+      { intent: "publish", formData: JSON.stringify({ businessName: "" }) },
+      { params: { pageType: "terms" } },
+    );
+    const response = await action(args);
+    const data = await response.json();
+
+    expect(data.success).toBe(false);
+    expect((data as Record<string, unknown>).errors).toBeDefined();
+  });
+
+  it("returns 403 when billing guard fails for terms", async () => {
+    mockCheckPlanAccess.mockResolvedValue(false);
+
+    const args = buildActionArgs(
+      { intent: "publish", formData: validTermsFormData },
+      { params: { pageType: "terms" } },
+    );
+    const response = await action(args);
+
+    expect(response.status).toBe(403);
+  });
+});
+
+// --- Return page type tests ---
+
+describe("Wizard loader - return", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetLegalPage.mockResolvedValue(null);
+    mockCheckPlanAccess.mockResolvedValue(true);
+    mockBilling.check.mockResolvedValue({ hasActivePayment: true });
+  });
+
+  it("returns empty formData for new return page", async () => {
+    const args = buildLoaderArgs({ params: { pageType: "return" } });
+    const response = await loader(args);
+    const data = await response.json();
+
+    expect(data.formData).toEqual({});
+    expect(data.pageType).toBe("return");
+  });
+
+  it("returns needsUpgrade true when billing fails for return", async () => {
+    mockCheckPlanAccess.mockResolvedValue(false);
+
+    const args = buildLoaderArgs({ params: { pageType: "return" } });
+    const response = await loader(args);
+    const data = await response.json();
+
+    expect(data.needsUpgrade).toBe(true);
+  });
+});
+
+describe("Wizard action - return save-draft", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCheckPlanAccess.mockResolvedValue(true);
+    mockUpsertLegalPageDraft.mockResolvedValue({ version: 2 });
+  });
+
+  it("saves return draft successfully", async () => {
+    const args = buildActionArgs(
+      { intent: "save-draft", formData: validReturnFormData, version: "1" },
+      { params: { pageType: "return" } },
+    );
+    const response = await action(args);
+    const data = await response.json();
+
+    expect(data.success).toBe(true);
+    expect(data.intent).toBe("save-draft");
+  });
+});
+
+describe("Wizard action - return publish", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCheckPlanAccess.mockResolvedValue(true);
+    mockCheckVersionOrThrow.mockResolvedValue(undefined);
+    mockGetLegalPageMeta.mockResolvedValue(null);
+    mockCreatePage.mockResolvedValue({ pageId: "gid://shopify/Page/new", handle: "return" });
+    mockPublishLegalPage.mockResolvedValue({ version: 2 });
+  });
+
+  it("publishes return page successfully", async () => {
+    const args = buildActionArgs(
+      { intent: "publish", formData: validReturnFormData },
+      { params: { pageType: "return" } },
+    );
+    const response = await action(args);
+    const data = await response.json();
+
+    expect(data.success).toBe(true);
+    expect(data.intent).toBe("publish");
+  });
+
+  it("returns validation errors for invalid return data", async () => {
+    const args = buildActionArgs(
+      { intent: "publish", formData: JSON.stringify({ businessName: "" }) },
+      { params: { pageType: "return" } },
+    );
+    const response = await action(args);
+    const data = await response.json();
+
+    expect(data.success).toBe(false);
+    expect((data as Record<string, unknown>).errors).toBeDefined();
+  });
+
+  it("returns 403 when billing guard fails for return", async () => {
+    mockCheckPlanAccess.mockResolvedValue(false);
+
+    const args = buildActionArgs(
+      { intent: "publish", formData: validReturnFormData },
+      { params: { pageType: "return" } },
+    );
+    const response = await action(args);
+
+    expect(response.status).toBe(403);
   });
 });

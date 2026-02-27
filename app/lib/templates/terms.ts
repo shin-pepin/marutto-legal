@@ -1,4 +1,4 @@
-import { html, safeHtml } from "../sanitize";
+import { html, safeHtml, nlToBr } from "../sanitize";
 import type { TermsFormData } from "../validation/terms";
 import { PROHIBITED_ACTIONS_OPTIONS, JURISDICTION_OPTIONS } from "../validation/terms";
 
@@ -19,7 +19,9 @@ export function generateTermsHtml(data: TermsFormData): string {
     ? html`<li>${data.prohibitedActionsOther}</li>`
     : "";
 
-  const jurisdictionLabel = getJurisdictionLabel(data.jurisdiction, data.jurisdictionOther);
+  const jurisdictionLabel = data.jurisdiction === "other" && data.jurisdictionOther
+    ? html`${data.jurisdictionOther}`
+    : getLabelFromOptions(JURISDICTION_OPTIONS, data.jurisdiction);
 
   return html`<div style="max-width:800px;margin:0 auto;">
   <h1 style="font-size:1.5em;margin-bottom:20px;">利用規約</h1>
@@ -66,19 +68,15 @@ export function generateTermsHtml(data: TermsFormData): string {
 </div>`;
 }
 
-function getJurisdictionLabel(jurisdiction: string, other: string): string {
-  if (jurisdiction === "other" && other) {
-    return html`${other}`;
-  }
-  const found = JURISDICTION_OPTIONS.find((o) => o.value === jurisdiction);
-  return found ? found.label : jurisdiction;
+function getLabelFromOptions(
+  options: ReadonlyArray<{ value: string; label: string }>,
+  value: string,
+): string {
+  const found = options.find((o) => o.value === value);
+  return found ? found.label : value;
 }
 
 const H2_STYLE = "font-size:1.2em;margin-top:24px;margin-bottom:12px;border-bottom:1px solid #ddd;padding-bottom:8px;";
 const P_STYLE = "margin-bottom:12px;line-height:1.8;";
 const OL_STYLE = "margin-bottom:12px;padding-left:24px;line-height:1.8;";
 
-function nlToBr(text: string): string {
-  const escaped = html`${text}`;
-  return escaped.replace(/\n/g, "<br>");
-}

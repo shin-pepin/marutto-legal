@@ -49,8 +49,8 @@ export const termsStep1Schema = z.object({
     .email("正しいメールアドレスを入力してください"),
 });
 
-// Step 2: 規約内容
-export const termsStep2Schema = z.object({
+// Step 2: 規約内容 (base object, used for merge)
+const termsStep2BaseSchema = z.object({
   registrationRequirement: z
     .string()
     .min(1, "利用登録の要件を入力してください")
@@ -91,10 +91,19 @@ export const termsStep2Schema = z.object({
     .max(MAX_LONG_TEXT_LENGTH),
 });
 
-export const termsFormSchema = termsStep1Schema.merge(termsStep2Schema);
+// Step 2 with cross-field validation
+export const termsStep2Schema = termsStep2BaseSchema.refine(
+  (data) => data.jurisdiction !== "other" || data.jurisdictionOther.length > 0,
+  { message: "「その他」を選択した場合は裁判管轄を入力してください", path: ["jurisdictionOther"] },
+);
+
+export const termsFormSchema = termsStep1Schema.merge(termsStep2BaseSchema).refine(
+  (data) => data.jurisdiction !== "other" || data.jurisdictionOther.length > 0,
+  { message: "「その他」を選択した場合は裁判管轄を入力してください", path: ["jurisdictionOther"] },
+);
 
 export type TermsStep1FormData = z.infer<typeof termsStep1Schema>;
-export type TermsStep2FormData = z.infer<typeof termsStep2Schema>;
+export type TermsStep2FormData = z.infer<typeof termsStep2BaseSchema>;
 export type TermsFormData = z.infer<typeof termsFormSchema>;
 
 export function validateTermsStep(step: number, data: unknown) {

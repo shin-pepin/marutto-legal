@@ -128,13 +128,29 @@ describe("termsStep2Schema", () => {
   });
 
   it("validates all jurisdiction enum values", () => {
-    for (const value of ["tokyo", "osaka", "nagoya", "fukuoka", "sapporo", "other"] as const) {
+    for (const value of ["tokyo", "osaka", "nagoya", "fukuoka", "sapporo"] as const) {
       const result = termsStep2Schema.safeParse({
         ...validStep2,
         jurisdiction: value,
       });
       expect(result.success).toBe(true);
     }
+    // "other" requires jurisdictionOther to be filled
+    const otherResult = termsStep2Schema.safeParse({
+      ...validStep2,
+      jurisdiction: "other",
+      jurisdictionOther: "横浜地方裁判所",
+    });
+    expect(otherResult.success).toBe(true);
+  });
+
+  it("rejects jurisdiction 'other' without jurisdictionOther", () => {
+    const result = termsStep2Schema.safeParse({
+      ...validStep2,
+      jurisdiction: "other",
+      jurisdictionOther: "",
+    });
+    expect(result.success).toBe(false);
   });
 
   it("rejects invalid jurisdiction value", () => {

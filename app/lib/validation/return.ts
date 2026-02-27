@@ -51,7 +51,8 @@ export const returnStep1Schema = z.object({
   phone: z
     .string()
     .min(1, "電話番号を入力してください")
-    .max(MAX_TEXT_LENGTH),
+    .max(20, "電話番号は20文字以内で入力してください")
+    .regex(/^[\d\-+()\s]+$/, "正しい電話番号を入力してください"),
   siteUrl: z
     .string()
     .min(1, "サイトURLを入力してください")
@@ -59,8 +60,8 @@ export const returnStep1Schema = z.object({
     .max(MAX_TEXT_LENGTH),
 });
 
-// Step 2: 返品条件
-export const returnStep2Schema = z.object({
+// Step 2: 返品条件 (base object, used for merge)
+const returnStep2BaseSchema = z.object({
   returnDeadline: z
     .string()
     .min(1, "返品期限を入力してください")
@@ -79,16 +80,16 @@ export const returnStep2Schema = z.object({
   }),
   refundTiming: z
     .string()
-    .min(1, "返金タイミングを入力してください")
-    .max(MAX_TEXT_LENGTH),
+    .max(MAX_TEXT_LENGTH)
+    .default(""),
   defectiveHandling: z
     .string()
-    .min(1, "不良品対応について入力してください")
-    .max(MAX_LONG_TEXT_LENGTH),
+    .max(MAX_LONG_TEXT_LENGTH)
+    .default(""),
   returnProcess: z
     .string()
-    .min(1, "返品手順を入力してください")
-    .max(MAX_LONG_TEXT_LENGTH),
+    .max(MAX_LONG_TEXT_LENGTH)
+    .default(""),
   nonReturnableItems: z
     .string()
     .max(MAX_LONG_TEXT_LENGTH)
@@ -99,10 +100,25 @@ export const returnStep2Schema = z.object({
     .max(MAX_LONG_TEXT_LENGTH),
 });
 
-export const returnFormSchema = returnStep1Schema.merge(returnStep2Schema);
+// Step 2 with cross-field validation
+export const returnStep2Schema = returnStep2BaseSchema.refine(
+  (data) => {
+    if (data.returnCondition === "no_returns") return true;
+    return data.refundTiming.length > 0 && data.defectiveHandling.length > 0 && data.returnProcess.length > 0;
+  },
+  { message: "返品対応の場合は返金タイミング、不良品対応、返品手順を入力してください", path: ["refundTiming"] },
+);
+
+export const returnFormSchema = returnStep1Schema.merge(returnStep2BaseSchema).refine(
+  (data) => {
+    if (data.returnCondition === "no_returns") return true;
+    return data.refundTiming.length > 0 && data.defectiveHandling.length > 0 && data.returnProcess.length > 0;
+  },
+  { message: "返品対応の場合は返金タイミング、不良品対応、返品手順を入力してください", path: ["refundTiming"] },
+);
 
 export type ReturnStep1FormData = z.infer<typeof returnStep1Schema>;
-export type ReturnStep2FormData = z.infer<typeof returnStep2Schema>;
+export type ReturnStep2FormData = z.infer<typeof returnStep2BaseSchema>;
 export type ReturnFormData = z.infer<typeof returnFormSchema>;
 
 export function validateReturnStep(step: number, data: unknown) {

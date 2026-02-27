@@ -1,4 +1,4 @@
-import { html, safeHtml } from "../sanitize";
+import { html, safeHtml, nlToBr } from "../sanitize";
 import type { ReturnFormData } from "../validation/return";
 import {
   RETURN_CONDITION_OPTIONS,
@@ -17,11 +17,32 @@ export function generateReturnHtml(data: ReturnFormData): string {
   const exchangeLabel = getLabelFromOptions(EXCHANGE_OPTIONS, data.exchangePolicy);
   const refundMethodLabel = getLabelFromOptions(REFUND_METHOD_OPTIONS, data.refundMethod);
 
+  const isNoReturns = data.returnCondition === "no_returns";
+
   const nonReturnableSection = data.nonReturnableItems
     ? html`
     <h2 style="${safeHtml(H2_STYLE)}">返品・交換をお受けできない場合</h2>
     <p style="${safeHtml(P_STYLE)}">${safeHtml(nlToBr(data.nonReturnableItems))}</p>`
     : "";
+
+  const refundSection = !isNoReturns ? html`
+  <h2 style="${safeHtml(H2_STYLE)}">返金について</h2>
+  <table style="${safeHtml(TABLE_STYLE)}">
+    <tr>
+      <th style="${safeHtml(TH_STYLE)}">返金方法</th>
+      <td style="${safeHtml(TD_STYLE)}">${refundMethodLabel}</td>
+    </tr>
+    <tr>
+      <th style="${safeHtml(TH_STYLE)}">返金タイミング</th>
+      <td style="${safeHtml(TD_STYLE)}">${data.refundTiming}</td>
+    </tr>
+  </table>
+
+  <h2 style="${safeHtml(H2_STYLE)}">不良品について</h2>
+  <p style="${safeHtml(P_STYLE)}">${safeHtml(nlToBr(data.defectiveHandling))}</p>
+
+  <h2 style="${safeHtml(H2_STYLE)}">返品・交換の手順</h2>
+  <p style="${safeHtml(P_STYLE)}">${safeHtml(nlToBr(data.returnProcess))}</p>` : "";
 
   return html`<div style="max-width:800px;margin:0 auto;">
   <h1 style="font-size:1.5em;margin-bottom:20px;">返品・交換ポリシー</h1>
@@ -48,23 +69,7 @@ export function generateReturnHtml(data: ReturnFormData): string {
     </tr>
   </table>
 
-  <h2 style="${safeHtml(H2_STYLE)}">返金について</h2>
-  <table style="${safeHtml(TABLE_STYLE)}">
-    <tr>
-      <th style="${safeHtml(TH_STYLE)}">返金方法</th>
-      <td style="${safeHtml(TD_STYLE)}">${refundMethodLabel}</td>
-    </tr>
-    <tr>
-      <th style="${safeHtml(TH_STYLE)}">返金タイミング</th>
-      <td style="${safeHtml(TD_STYLE)}">${data.refundTiming}</td>
-    </tr>
-  </table>
-
-  <h2 style="${safeHtml(H2_STYLE)}">不良品について</h2>
-  <p style="${safeHtml(P_STYLE)}">${safeHtml(nlToBr(data.defectiveHandling))}</p>
-
-  <h2 style="${safeHtml(H2_STYLE)}">返品・交換の手順</h2>
-  <p style="${safeHtml(P_STYLE)}">${safeHtml(nlToBr(data.returnProcess))}</p>
+  ${safeHtml(refundSection)}
 
   ${safeHtml(nonReturnableSection)}
 
@@ -94,7 +99,3 @@ const TABLE_STYLE = "width:100%;border-collapse:collapse;margin-bottom:20px;";
 const TH_STYLE = "text-align:left;padding:10px 12px;border:1px solid #ddd;background:#f8f8f8;width:30%;vertical-align:top;font-weight:600;";
 const TD_STYLE = "padding:10px 12px;border:1px solid #ddd;vertical-align:top;";
 
-function nlToBr(text: string): string {
-  const escaped = html`${text}`;
-  return escaped.replace(/\n/g, "<br>");
-}

@@ -67,3 +67,12 @@ class SafeHtml {
 export function safeHtml(str: string): SafeHtml {
   return new SafeHtml(str);
 }
+
+/**
+ * Convert newlines to <br> tags in user-supplied text.
+ * The text is first HTML-escaped via the html`` tag, then newlines are replaced.
+ */
+export function nlToBr(text: string): string {
+  const escaped = html`${text}`;
+  return escaped.replace(/\n/g, "<br>");
+}

@@ -1,4 +1,4 @@
-import { html, safeHtml } from "../sanitize";
+import { html, safeHtml, nlToBr } from "../sanitize";
 import type { PrivacyFormData } from "../validation/privacy";
 import { COLLECTED_INFO_OPTIONS, PURPOSE_OF_USE_OPTIONS } from "../validation/privacy";
 
@@ -120,7 +120,3 @@ const H2_STYLE = "font-size:1.2em;margin-top:24px;margin-bottom:12px;border-bott
 const P_STYLE = "margin-bottom:12px;line-height:1.8;";
 const UL_STYLE = "margin-bottom:12px;padding-left:24px;line-height:1.8;";
 
-function nlToBr(text: string): string {
-  const escaped = html`${text}`;
-  return escaped.replace(/\n/g, "<br>");
-}

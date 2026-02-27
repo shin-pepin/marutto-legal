@@ -23,6 +23,7 @@ vi.mock("../../db.server", () => ({
 describe("Webhook: app/uninstalled", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.resetModules();
   });
 
   it("deletes sessions when session exists", async () => {
@@ -67,6 +68,7 @@ describe("Webhook: app/uninstalled", () => {
 describe("Webhook: app_subscriptions/update", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.resetModules();
   });
 
   it("logs subscription update payload", async () => {

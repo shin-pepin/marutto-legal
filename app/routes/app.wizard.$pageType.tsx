@@ -482,8 +482,8 @@ export default function WizardPage() {
                       <List>
                         <List.Item>全ページタイプの作成</List.Item>
                         <List.Item>プライバシーポリシー</List.Item>
-                        <List.Item>利用規約（近日対応）</List.Item>
-                        <List.Item>返品・交換ポリシー（近日対応）</List.Item>
+                        <List.Item>利用規約</List.Item>
+                        <List.Item>返品・交換ポリシー</List.Item>
                       </List>
                     </BlockStack>
                   </Card>
