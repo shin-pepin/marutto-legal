@@ -1,0 +1,10 @@
+{
+  "confirmation": {
+    "quantity_label": "分量",
+    "price_label": "販売価格",
+    "payment_label": "支払方法・時期",
+    "delivery_label": "引渡時期",
+    "cancellation_label": "申込みの撤回・解除に関する事項",
+    "period_label": "申込期間"
+  }
+}

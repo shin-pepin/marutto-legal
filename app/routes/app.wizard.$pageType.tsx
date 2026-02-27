@@ -236,6 +236,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
         shopifyPageId,
         contentHtml,
         formData: formDataJson,
+        formSchemaVersion: config.templateVersion,
       }, expectedVersion);
       return json({
         success: true,

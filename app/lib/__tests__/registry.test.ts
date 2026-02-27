@@ -4,6 +4,7 @@ import {
   getAllPageTypes,
   isValidPageType,
   registerPageType,
+  getTemplateUpdates,
 } from "../pageTypes/registry";
 import "../pageTypes"; // register all page types
 
@@ -33,6 +34,8 @@ describe("pageTypes registry", () => {
       fullSchema: {} as any,
       steps: [],
       generateHtml: () => "",
+      templateVersion: 1,
+      versionHistory: [],
     });
     expect(getPageTypeConfig("tokushoho")!.title).toBe("updated");
     // Restore original to not break other tests
@@ -171,5 +174,43 @@ describe("privacy config", () => {
 
   it("does not have sections", () => {
     expect(config!.sections).toBeUndefined();
+  });
+});
+
+describe("templateVersion in all configs", () => {
+  const configs = getAllPageTypes();
+
+  it("all configs have templateVersion", () => {
+    for (const config of configs) {
+      expect(config.templateVersion).toBeDefined();
+      expect(typeof config.templateVersion).toBe("number");
+      expect(config.templateVersion).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("all configs have versionHistory", () => {
+    for (const config of configs) {
+      expect(Array.isArray(config.versionHistory)).toBe(true);
+      expect(config.versionHistory.length).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("getTemplateUpdates returns empty for current version", () => {
+    for (const config of configs) {
+      const updates = getTemplateUpdates(config.type, config.templateVersion);
+      expect(updates).toEqual([]);
+    }
+  });
+
+  it("getTemplateUpdates returns updates for older version", () => {
+    for (const config of configs) {
+      const updates = getTemplateUpdates(config.type, 0);
+      expect(updates.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("terms has templateVersion 1", () => {
+    const termsConfig = getPageTypeConfig("terms");
+    expect(termsConfig!.templateVersion).toBe(1);
   });
 });

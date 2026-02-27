@@ -23,6 +23,7 @@ export default function App() {
         <Link to="/app" rel="home">
           ダッシュボード
         </Link>
+        <Link to="/app/confirmation">最終確認画面設定</Link>
       </NavMenu>
       <Outlet />
     </AppProvider>

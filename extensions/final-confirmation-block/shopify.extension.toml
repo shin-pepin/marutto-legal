@@ -1,0 +1,13 @@
+api_version = "2026-01"
+
+[[extensions]]
+name = "最終確認画面"
+handle = "final-confirmation-block"
+type = "theme"
+
+[extensions.capabilities]
+block_progression = true
+
+[[extensions.targeting]]
+module = "./blocks/confirmation.liquid"
+target = "section"

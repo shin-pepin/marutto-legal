@@ -124,6 +124,7 @@ export async function upsertLegalPageDraft(
 /**
  * Publish a legal page (update with generated HTML and Shopify page ID).
  * Uses optimistic locking via version field.
+ * Optionally sets formSchemaVersion (template version at publish time).
  */
 export async function publishLegalPage(
   storeId: string,
@@ -132,12 +133,15 @@ export async function publishLegalPage(
     shopifyPageId: string;
     contentHtml: string;
     formData: string;
+    formSchemaVersion?: number;
   },
   expectedVersion?: number,
 ) {
+  const { formSchemaVersion, ...rest } = data;
   const encryptedData = {
-    ...data,
-    formData: encryptFormData(data.formData),
+    ...rest,
+    formData: encryptFormData(rest.formData),
+    ...(formSchemaVersion !== undefined ? { formSchemaVersion } : {}),
   };
 
   const existing = await getLegalPageMeta(storeId, pageType);
@@ -184,6 +188,25 @@ export async function publishLegalPage(
       pageType,
       ...encryptedData,
       status: "published",
+    },
+  });
+}
+
+/**
+ * Update a published legal page's content and formSchemaVersion.
+ * Used by template update flow (re-generate from existing formData).
+ */
+export async function updateLegalPageVersion(
+  pageId: string,
+  newVersion: number,
+  contentHtml: string,
+) {
+  return db.legalPage.update({
+    where: { id: pageId },
+    data: {
+      contentHtml,
+      formSchemaVersion: newVersion,
+      version: { increment: 1 },
     },
   });
 }

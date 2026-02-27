@@ -1,0 +1,10 @@
+{
+  "confirmation": {
+    "quantity_label": "Quantity",
+    "price_label": "Price",
+    "payment_label": "Payment Method & Timing",
+    "delivery_label": "Delivery",
+    "cancellation_label": "Cancellation & Returns",
+    "period_label": "Offer Period"
+  }
+}
