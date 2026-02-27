@@ -1,4 +1,4 @@
-import { html, safeHtml, nlToBr } from "../sanitize";
+import { html, safeHtml, nlToBr, getLabelFromOptions } from "../sanitize";
 import type { TermsFormData } from "../validation/terms";
 import { PROHIBITED_ACTIONS_OPTIONS, JURISDICTION_OPTIONS } from "../validation/terms";
 
@@ -66,14 +66,6 @@ export function generateTermsHtml(data: TermsFormData): string {
   </p>
   <p style="${safeHtml(P_STYLE)}">お問い合わせ方法: ${safeHtml(nlToBr(data.contactMethod))}</p>
 </div>`;
-}
-
-function getLabelFromOptions(
-  options: ReadonlyArray<{ value: string; label: string }>,
-  value: string,
-): string {
-  const found = options.find((o) => o.value === value);
-  return found ? found.label : value;
 }
 
 const H2_STYLE = "font-size:1.2em;margin-top:24px;margin-bottom:12px;border-bottom:1px solid #ddd;padding-bottom:8px;";

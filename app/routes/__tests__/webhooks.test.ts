@@ -93,12 +93,14 @@ describe("Webhook: app_subscriptions/update", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("APP_SUBSCRIPTIONS_UPDATE"),
-    );
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Basic"),
-    );
+    // Structured JSON log should contain topic, shop, plan, and status
+    const logCall = consoleSpy.mock.calls[0]![0] as string;
+    const logData = JSON.parse(logCall);
+    expect(logData.event).toBe("webhook_received");
+    expect(logData.topic).toBe("APP_SUBSCRIPTIONS_UPDATE");
+    expect(logData.shop).toBe("test-store.myshopify.com");
+    expect(logData.plan).toBe("Basic");
+    expect(logData.status).toBe("ACTIVE");
     consoleSpy.mockRestore();
   });
 

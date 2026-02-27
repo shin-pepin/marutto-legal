@@ -223,6 +223,34 @@ describe("returnStep2Schema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("shows error on correct field path for each required field", () => {
+    const result = returnStep2Schema.safeParse({
+      ...validStep2,
+      refundTiming: "",
+      defectiveHandling: "",
+      returnProcess: "",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const paths = result.error.issues.map((i) => i.path[0]);
+      expect(paths).toContain("refundTiming");
+      expect(paths).toContain("defectiveHandling");
+      expect(paths).toContain("returnProcess");
+    }
+  });
+
+  it("allows empty returnDeadline/refundTiming/defectiveHandling/returnProcess for no_returns", () => {
+    const result = returnStep2Schema.safeParse({
+      ...validStep2,
+      returnCondition: "no_returns",
+      returnDeadline: "",
+      refundTiming: "",
+      defectiveHandling: "",
+      returnProcess: "",
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("allows empty nonReturnableItems", () => {
     const result = returnStep2Schema.safeParse({
       ...validStep2,

@@ -1,4 +1,4 @@
-import { html, safeHtml, nlToBr } from "../sanitize";
+import { html, safeHtml, nlToBr, getLabelFromOptions } from "../sanitize";
 import type { ReturnFormData } from "../validation/return";
 import {
   RETURN_CONDITION_OPTIONS,
@@ -51,10 +51,10 @@ export function generateReturnHtml(data: ReturnFormData): string {
 
   <h2 style="${safeHtml(H2_STYLE)}">返品・交換の条件</h2>
   <table style="${safeHtml(TABLE_STYLE)}">
-    <tr>
+    ${safeHtml(!isNoReturns && data.returnDeadline ? html`<tr>
       <th style="${safeHtml(TH_STYLE)}">返品期限</th>
       <td style="${safeHtml(TD_STYLE)}">${data.returnDeadline}</td>
-    </tr>
+    </tr>` : "")}
     <tr>
       <th style="${safeHtml(TH_STYLE)}">返品条件</th>
       <td style="${safeHtml(TD_STYLE)}">${returnConditionLabel}</td>
@@ -83,14 +83,6 @@ export function generateReturnHtml(data: ReturnFormData): string {
   </p>
   <p style="${safeHtml(P_STYLE)}">お問い合わせ方法: ${safeHtml(nlToBr(data.contactMethod))}</p>
 </div>`;
-}
-
-function getLabelFromOptions(
-  options: ReadonlyArray<{ value: string; label: string }>,
-  value: string,
-): string {
-  const found = options.find((o) => o.value === value);
-  return found ? found.label : value;
 }
 
 const H2_STYLE = "font-size:1.2em;margin-top:24px;margin-bottom:12px;border-bottom:1px solid #ddd;padding-bottom:8px;";

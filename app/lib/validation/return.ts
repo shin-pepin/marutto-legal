@@ -64,8 +64,8 @@ export const returnStep1Schema = z.object({
 const returnStep2BaseSchema = z.object({
   returnDeadline: z
     .string()
-    .min(1, "返品期限を入力してください")
-    .max(MAX_TEXT_LENGTH),
+    .max(MAX_TEXT_LENGTH)
+    .default(""),
   returnCondition: z.enum(RETURN_CONDITION_VALUES, {
     errorMap: () => ({ message: "返品条件を選択してください" }),
   }),
@@ -100,22 +100,36 @@ const returnStep2BaseSchema = z.object({
     .max(MAX_LONG_TEXT_LENGTH),
 });
 
-// Step 2 with cross-field validation
-export const returnStep2Schema = returnStep2BaseSchema.refine(
-  (data) => {
-    if (data.returnCondition === "no_returns") return true;
-    return data.refundTiming.length > 0 && data.defectiveHandling.length > 0 && data.returnProcess.length > 0;
-  },
-  { message: "返品対応の場合は返金タイミング、不良品対応、返品手順を入力してください", path: ["refundTiming"] },
-);
+const isNotNoReturns = (data: { returnCondition: string }) => data.returnCondition !== "no_returns";
 
-export const returnFormSchema = returnStep1Schema.merge(returnStep2BaseSchema).refine(
-  (data) => {
-    if (data.returnCondition === "no_returns") return true;
-    return data.refundTiming.length > 0 && data.defectiveHandling.length > 0 && data.returnProcess.length > 0;
-  },
-  { message: "返品対応の場合は返金タイミング、不良品対応、返品手順を入力してください", path: ["refundTiming"] },
-);
+function addReturnRefines<T extends z.ZodTypeAny>(schema: T) {
+  return schema
+    .refine(
+      (data: z.infer<typeof returnStep2BaseSchema>) =>
+        !isNotNoReturns(data) || data.returnDeadline.length > 0,
+      { message: "返品期限を入力してください", path: ["returnDeadline"] },
+    )
+    .refine(
+      (data: z.infer<typeof returnStep2BaseSchema>) =>
+        !isNotNoReturns(data) || data.refundTiming.length > 0,
+      { message: "返金タイミングを入力してください", path: ["refundTiming"] },
+    )
+    .refine(
+      (data: z.infer<typeof returnStep2BaseSchema>) =>
+        !isNotNoReturns(data) || data.defectiveHandling.length > 0,
+      { message: "不良品対応について入力してください", path: ["defectiveHandling"] },
+    )
+    .refine(
+      (data: z.infer<typeof returnStep2BaseSchema>) =>
+        !isNotNoReturns(data) || data.returnProcess.length > 0,
+      { message: "返品手順を入力してください", path: ["returnProcess"] },
+    );
+}
+
+// Step 2 with cross-field validation
+export const returnStep2Schema = addReturnRefines(returnStep2BaseSchema);
+
+export const returnFormSchema = addReturnRefines(returnStep1Schema.merge(returnStep2BaseSchema));
 
 export type ReturnStep1FormData = z.infer<typeof returnStep1Schema>;
 export type ReturnStep2FormData = z.infer<typeof returnStep2BaseSchema>;
