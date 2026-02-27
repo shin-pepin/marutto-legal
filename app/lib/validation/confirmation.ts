@@ -8,37 +8,50 @@ const MAX_LONG_TEXT_LENGTH = 2000;
  * 2022年改正特商法 第12条の6 — 最終確認画面に表示が義務付けられる6項目:
  * 1. 分量  2. 販売価格  3. 支払方法・時期  4. 引渡時期  5. 解除・返品事項  6. 申込期間
  */
-export const confirmationSchema = z.object({
-  enabled: z.boolean(),
-  quantityText: z
-    .string()
-    .min(1, "分量に関する表示内容を入力してください")
-    .max(MAX_TEXT_LENGTH),
-  priceText: z
-    .string()
-    .min(1, "販売価格に関する表示内容を入力してください")
-    .max(MAX_LONG_TEXT_LENGTH),
-  paymentText: z
-    .string()
-    .min(1, "支払方法・時期に関する表示内容を入力してください")
-    .max(MAX_LONG_TEXT_LENGTH),
-  deliveryText: z
-    .string()
-    .min(1, "引渡時期に関する表示内容を入力してください")
-    .max(MAX_LONG_TEXT_LENGTH),
-  cancellationText: z
-    .string()
-    .min(1, "解除・返品に関する表示内容を入力してください")
-    .max(MAX_LONG_TEXT_LENGTH),
-  periodText: z
-    .string()
-    .min(1, "申込期間に関する表示内容を入力してください")
-    .max(MAX_TEXT_LENGTH),
-  checkboxLabel: z
-    .string()
-    .min(1, "チェックボックスラベルを入力してください")
-    .max(MAX_TEXT_LENGTH),
-});
+// Base shape: max-length only (used when enabled: false)
+const textFields = {
+  quantityText: z.string().max(MAX_TEXT_LENGTH),
+  priceText: z.string().max(MAX_LONG_TEXT_LENGTH),
+  paymentText: z.string().max(MAX_LONG_TEXT_LENGTH),
+  deliveryText: z.string().max(MAX_LONG_TEXT_LENGTH),
+  cancellationText: z.string().max(MAX_LONG_TEXT_LENGTH),
+  periodText: z.string().max(MAX_TEXT_LENGTH),
+  checkboxLabel: z.string().max(MAX_TEXT_LENGTH),
+};
+
+// Required-text messages (used when enabled: true)
+const requiredMessages: Record<keyof typeof textFields, string> = {
+  quantityText: "分量に関する表示内容を入力してください",
+  priceText: "販売価格に関する表示内容を入力してください",
+  paymentText: "支払方法・時期に関する表示内容を入力してください",
+  deliveryText: "引渡時期に関する表示内容を入力してください",
+  cancellationText: "解除・返品に関する表示内容を入力してください",
+  periodText: "申込期間に関する表示内容を入力してください",
+  checkboxLabel: "チェックボックスラベルを入力してください",
+};
+
+export const confirmationSchema = z
+  .object({
+    enabled: z.boolean(),
+    ...textFields,
+  })
+  .superRefine((data, ctx) => {
+    // When disabled, skip min-length validation — allow empty fields
+    if (!data.enabled) return;
+    for (const [field, message] of Object.entries(requiredMessages)) {
+      const value = data[field as keyof typeof textFields];
+      if (!value || value.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.too_small,
+          minimum: 1,
+          type: "string",
+          inclusive: true,
+          message,
+          path: [field],
+        });
+      }
+    }
+  });
 
 export type ConfirmationFormData = z.infer<typeof confirmationSchema>;
 

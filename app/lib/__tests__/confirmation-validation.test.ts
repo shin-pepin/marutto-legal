@@ -18,8 +18,8 @@ describe("confirmationSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects empty quantityText", () => {
-    const data = { ...CONFIRMATION_DEFAULTS, quantityText: "" };
+  it("rejects empty quantityText when enabled", () => {
+    const data = { ...CONFIRMATION_DEFAULTS, enabled: true, quantityText: "" };
     const result = confirmationSchema.safeParse(data);
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -28,40 +28,55 @@ describe("confirmationSchema", () => {
     }
   });
 
-  it("rejects empty priceText", () => {
-    const data = { ...CONFIRMATION_DEFAULTS, priceText: "" };
+  it("rejects empty priceText when enabled", () => {
+    const data = { ...CONFIRMATION_DEFAULTS, enabled: true, priceText: "" };
     const result = confirmationSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
 
-  it("rejects empty paymentText", () => {
-    const data = { ...CONFIRMATION_DEFAULTS, paymentText: "" };
+  it("rejects empty paymentText when enabled", () => {
+    const data = { ...CONFIRMATION_DEFAULTS, enabled: true, paymentText: "" };
     const result = confirmationSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
 
-  it("rejects empty deliveryText", () => {
-    const data = { ...CONFIRMATION_DEFAULTS, deliveryText: "" };
+  it("rejects empty deliveryText when enabled", () => {
+    const data = { ...CONFIRMATION_DEFAULTS, enabled: true, deliveryText: "" };
     const result = confirmationSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
 
-  it("rejects empty cancellationText", () => {
-    const data = { ...CONFIRMATION_DEFAULTS, cancellationText: "" };
+  it("rejects empty cancellationText when enabled", () => {
+    const data = { ...CONFIRMATION_DEFAULTS, enabled: true, cancellationText: "" };
     const result = confirmationSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
 
-  it("rejects empty periodText", () => {
-    const data = { ...CONFIRMATION_DEFAULTS, periodText: "" };
+  it("rejects empty periodText when enabled", () => {
+    const data = { ...CONFIRMATION_DEFAULTS, enabled: true, periodText: "" };
     const result = confirmationSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
 
-  it("rejects empty checkboxLabel", () => {
-    const data = { ...CONFIRMATION_DEFAULTS, checkboxLabel: "" };
+  it("rejects empty checkboxLabel when enabled", () => {
+    const data = { ...CONFIRMATION_DEFAULTS, enabled: true, checkboxLabel: "" };
     const result = confirmationSchema.safeParse(data);
     expect(result.success).toBe(false);
+  });
+
+  it("allows empty text fields when disabled", () => {
+    const data = {
+      enabled: false,
+      quantityText: "",
+      priceText: "",
+      paymentText: "",
+      deliveryText: "",
+      cancellationText: "",
+      periodText: "",
+      checkboxLabel: "",
+    };
+    const result = confirmationSchema.safeParse(data);
+    expect(result.success).toBe(true);
   });
 
   it("enforces max length on quantityText (500)", () => {
