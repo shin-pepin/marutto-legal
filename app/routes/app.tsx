@@ -23,7 +23,6 @@ export default function App() {
         <Link to="/app" rel="home">
           ダッシュボード
         </Link>
-        <Link to="/app/wizard">特商法ページ作成</Link>
       </NavMenu>
       <Outlet />
     </AppProvider>
