@@ -27,19 +27,22 @@ import { updatePage, getPage, createPage } from "../lib/shopify/pages.server";
 import "../lib/pageTypes";
 import type { PageType } from "../types/wizard";
 
-interface PageWithUpdates {
+// H-2/H-8: Only send UI-needed fields to client (no formData/contentHtml/version)
+interface PageForClient {
   id: string;
   pageType: string;
   status: string;
   shopifyPageId: string | null;
   updatedAt: string;
-  formData: string | null;
   formSchemaVersion: number;
-  contentHtml: string | null;
-  version: number;
   hasTemplateUpdate: boolean;
   pendingUpdates: VersionHistoryEntry[];
 }
+
+// H-3: Discriminated union for action responses
+type ActionResponse =
+  | { success: true; intent: string }
+  | { success: false; error: string; redirectTo?: string };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, billing, session } = await authenticate.admin(request);
@@ -103,7 +106,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 
   // T4-A: Compare formSchemaVersion with config.templateVersion for each page
-  const pagesWithUpdates: PageWithUpdates[] = pages.map((p) => {
+  // H-2/H-8: Strip sensitive fields (formData, contentHtml) from client response
+  const pagesForClient: PageForClient[] = pages.map((p) => {
     const config = getPageTypeConfig(p.pageType);
     const pending = config
       ? getTemplateUpdates(p.pageType, p.formSchemaVersion)
@@ -114,16 +118,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       status: p.status,
       shopifyPageId: p.shopifyPageId,
       updatedAt: p.updatedAt as unknown as string,
-      formData: p.formData,
       formSchemaVersion: p.formSchemaVersion,
-      contentHtml: p.contentHtml,
-      version: p.version,
       hasTemplateUpdate: pending.length > 0,
       pendingUpdates: pending,
     };
   });
 
-  return json({ pages: pagesWithUpdates, shop, hasPaidPlan });
+  return json({ pages: pagesForClient, shop, hasPaidPlan });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -135,18 +136,30 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (intent === "apply-template-update") {
     const pageType = formPayload.get("pageType") as string;
     if (!pageType) {
-      return json({ success: false, error: "pageType is required" }, { status: 400 });
+      return json<ActionResponse>({ success: false, error: "pageType is required" }, { status: 400 });
     }
 
     const config = getPageTypeConfig(pageType);
     if (!config) {
-      return json({ success: false, error: "Unknown page type" }, { status: 400 });
+      return json<ActionResponse>({ success: false, error: "Unknown page type" }, { status: 400 });
     }
 
-    // Load existing page with formData
+    // H-9: Billing check for paid page types
+    const requiredPlan = config.requiredPlan || "free";
+    if (requiredPlan !== "free") {
+      const hasAccess = await checkPlanAccess(billing as BillingCheckContext, requiredPlan);
+      if (!hasAccess) {
+        return json<ActionResponse>(
+          { success: false, error: "このページタイプにはBasicプランが必要です。" },
+          { status: 403 },
+        );
+      }
+    }
+
+    // Load existing page with formData (server-side only, never sent to client)
     const page = await getLegalPage(shop, pageType as PageType);
     if (!page || !page.formData) {
-      return json({ success: false, error: "ページが見つかりません" }, { status: 404 });
+      return json<ActionResponse>({ success: false, error: "ページが見つかりません" }, { status: 404 });
     }
 
     // Parse existing formData
@@ -154,30 +167,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     try {
       formData = JSON.parse(page.formData);
     } catch {
-      return json({
+      return json<ActionResponse>({
         success: false,
         error: "フォームデータの解析に失敗しました。ウィザードから再編集してください。",
         redirectTo: `/app/wizard/${pageType}`,
       }, { status: 400 });
     }
 
-    // Normalize data if needed
-    const normalized = config.normalizeData
-      ? config.normalizeData(formData)
-      : formData;
-
-    // Validate against current full schema
-    const validation = config.fullSchema.safeParse(normalized);
+    // Validate against current full schema (validate first, then normalize — same as wizard)
+    const validation = config.fullSchema.safeParse(formData);
     if (!validation.success) {
-      return json({
+      return json<ActionResponse>({
         success: false,
         error: "テンプレートが更新されましたが、既存データに互換性がありません。ウィザードから再編集してください。",
         redirectTo: `/app/wizard/${pageType}`,
       });
     }
 
+    // Normalize data if needed (after validation to avoid crashes on incomplete data)
+    const normalized = config.normalizeData
+      ? config.normalizeData(validation.data as Record<string, unknown>)
+      : validation.data;
+
     // Re-generate HTML with current template
-    const contentHtml = config.generateHtml(validation.data as Record<string, unknown>);
+    const contentHtml = config.generateHtml(normalized as Record<string, unknown>);
+
+    // C-1: Track new shopifyPageId if page is recreated
+    let newShopifyPageId: string | undefined;
 
     // Update Shopify page if it exists
     if (page.shopifyPageId && page.status === "published") {
@@ -186,30 +202,32 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         if (existingPage) {
           await updatePage(admin, page.shopifyPageId, { bodyHtml: contentHtml });
         } else {
-          // Page was deleted on Shopify — recreate
+          // C-1: Page was deleted on Shopify — recreate and persist new ID
           const result = await createPage(admin, {
             title: config.shopifyPageTitle,
             handle: config.handle,
             bodyHtml: contentHtml,
             published: false,
           });
-          // Update shopifyPageId would require an extra DB call; skip for now
-          // The user can re-publish from the wizard if needed
-          void result;
+          newShopifyPageId = result.pageId;
         }
       } catch (error) {
         console.error("[apply-template-update] Shopify API error:", error);
-        return json({
+        return json<ActionResponse>({
           success: false,
           error: "Shopifyページの更新に失敗しました。しばらくしてからもう一度お試しください。",
         }, { status: 502 });
       }
     }
 
-    // Update DB: new contentHtml + formSchemaVersion
-    await updateLegalPageVersion(page.id, config.templateVersion, contentHtml);
+    // Update DB: new contentHtml + formSchemaVersion + optional new shopifyPageId
+    // H-1: Use optimistic locking via expectedVersion
+    await updateLegalPageVersion(page.id, config.templateVersion, contentHtml, {
+      shopifyPageId: newShopifyPageId,
+      expectedVersion: page.version,
+    });
 
-    return json({ success: true, intent: "apply-template-update" });
+    return json<ActionResponse>({ success: true, intent: "apply-template-update" });
   }
 
   if (intent === "upgrade") {
@@ -219,7 +237,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     });
   }
 
-  return json({ success: false, error: "Unknown intent" }, { status: 400 });
+  return json<ActionResponse>({ success: false, error: "Unknown intent" }, { status: 400 });
 };
 
 export default function DashboardPage() {
@@ -238,6 +256,13 @@ export default function DashboardPage() {
     fetcher.state !== "idle"
       ? (fetcher.formData?.get("pageType") as string | null)
       : null;
+
+  // H-3: Type-safe access to fetcher data
+  const fetcherError =
+    fetcher.data && !fetcher.data.success
+      ? (fetcher.data as { success: false; error: string; redirectTo?: string })
+      : null;
+  const fetcherSuccess = fetcher.data?.success ?? false;
 
   return (
     <Page>
@@ -270,15 +295,13 @@ export default function DashboardPage() {
               </EmptyState>
             ) : (
               <BlockStack gap="400">
-                {fetcher.data && !fetcher.data.success && (
+                {fetcherError && (
                   <Banner tone="critical">
-                    <p>{(fetcher.data as unknown as { error?: string }).error || "エラーが発生しました"}</p>
-                    {(fetcher.data as unknown as { redirectTo?: string }).redirectTo && (
+                    <p>{fetcherError.error}</p>
+                    {fetcherError.redirectTo && (
                       <Button
                         variant="plain"
-                        onClick={() =>
-                          navigate((fetcher.data as unknown as { redirectTo: string }).redirectTo)
-                        }
+                        onClick={() => navigate(fetcherError.redirectTo!)}
                       >
                         ウィザードで編集する
                       </Button>
@@ -286,7 +309,7 @@ export default function DashboardPage() {
                   </Banner>
                 )}
 
-                {fetcher.data?.success && (
+                {fetcherSuccess && (
                   <Banner tone="success">
                     <p>テンプレートの更新を適用しました。</p>
                   </Banner>
@@ -352,22 +375,24 @@ export default function DashboardPage() {
                 )}
 
                 {/* T4-B1: Final confirmation screen promotion */}
-                <Card>
-                  <BlockStack gap="300">
-                    <InlineStack gap="200" blockAlign="center">
-                      <Text as="h3" variant="headingMd">
-                        最終確認画面設定
+                {hasPaidPlan && (
+                  <Card>
+                    <BlockStack gap="300">
+                      <InlineStack gap="200" blockAlign="center">
+                        <Text as="h3" variant="headingMd">
+                          最終確認画面設定
+                        </Text>
+                        <Badge tone="info">2022年改正特商法対応</Badge>
+                      </InlineStack>
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        カートページに法定6項目（分量・販売価格・支払方法・引渡時期・解除事項・申込期間）を表示し、改正特商法に対応します。
                       </Text>
-                      <Badge tone="info">2022年改正特商法対応</Badge>
-                    </InlineStack>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      カートページに法定6項目（分量・販売価格・支払方法・引渡時期・解除事項・申込期間）を表示し、改正特商法に対応します。
-                    </Text>
-                    <Button onClick={() => navigate("/app/confirmation")}>
-                      設定する
-                    </Button>
-                  </BlockStack>
-                </Card>
+                      <Button onClick={() => navigate("/app/confirmation")}>
+                        設定する
+                      </Button>
+                    </BlockStack>
+                  </Card>
+                )}
               </BlockStack>
             )}
           </BlockStack>

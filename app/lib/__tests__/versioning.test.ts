@@ -90,8 +90,14 @@ describe("getTemplateUpdates", () => {
 });
 
 describe("updateLegalPageVersion", () => {
-  const { mockUpdateLegalPage } = vi.hoisted(() => ({
-    mockUpdateLegalPage: vi.fn().mockResolvedValue({
+  const { mockUpdate, mockUpdateMany, mockFindUniqueOrThrow } = vi.hoisted(() => ({
+    mockUpdate: vi.fn().mockResolvedValue({
+      id: "page-1",
+      formSchemaVersion: 2,
+      contentHtml: "<p>updated</p>",
+    }),
+    mockUpdateMany: vi.fn().mockResolvedValue({ count: 1 }),
+    mockFindUniqueOrThrow: vi.fn().mockResolvedValue({
       id: "page-1",
       formSchemaVersion: 2,
       contentHtml: "<p>updated</p>",
@@ -101,20 +107,26 @@ describe("updateLegalPageVersion", () => {
   vi.mock("../../db.server", () => ({
     default: {
       legalPage: {
-        update: (...args: unknown[]) => mockUpdateLegalPage(...args),
+        update: (...args: unknown[]) => mockUpdate(...args),
+        updateMany: (...args: unknown[]) => mockUpdateMany(...args),
+        findUniqueOrThrow: (...args: unknown[]) => mockFindUniqueOrThrow(...args),
       },
     },
   }));
 
-  // Reset mock state between tests
+  vi.mock("../crypto.server", () => ({
+    encryptFormData: (data: string) => `encrypted:${data}`,
+    decryptFormData: (data: string) => data.replace("encrypted:", ""),
+  }));
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("calls DB update with correct parameters", async () => {
+  it("calls DB update without optimistic lock by default", async () => {
     const { updateLegalPageVersion } = await import("../db/legalPage.server");
     await updateLegalPageVersion("page-1", 2, "<p>updated</p>");
-    expect(mockUpdateLegalPage).toHaveBeenCalledWith({
+    expect(mockUpdate).toHaveBeenCalledWith({
       where: { id: "page-1" },
       data: {
         contentHtml: "<p>updated</p>",
@@ -122,6 +134,47 @@ describe("updateLegalPageVersion", () => {
         version: { increment: 1 },
       },
     });
+  });
+
+  it("includes shopifyPageId when provided", async () => {
+    const { updateLegalPageVersion } = await import("../db/legalPage.server");
+    await updateLegalPageVersion("page-1", 2, "<p>updated</p>", {
+      shopifyPageId: "gid://shopify/Page/99",
+    });
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: "page-1" },
+      data: {
+        contentHtml: "<p>updated</p>",
+        formSchemaVersion: 2,
+        version: { increment: 1 },
+        shopifyPageId: "gid://shopify/Page/99",
+      },
+    });
+  });
+
+  it("uses optimistic locking when expectedVersion is provided", async () => {
+    const { updateLegalPageVersion } = await import("../db/legalPage.server");
+    await updateLegalPageVersion("page-1", 2, "<p>updated</p>", {
+      expectedVersion: 3,
+    });
+    expect(mockUpdateMany).toHaveBeenCalledWith({
+      where: { id: "page-1", version: 3 },
+      data: expect.objectContaining({
+        contentHtml: "<p>updated</p>",
+        formSchemaVersion: 2,
+        version: 4,
+      }),
+    });
+  });
+
+  it("throws OptimisticLockError when version mismatch", async () => {
+    mockUpdateMany.mockResolvedValue({ count: 0 });
+    const { updateLegalPageVersion, OptimisticLockError } = await import("../db/legalPage.server");
+    await expect(
+      updateLegalPageVersion("page-1", 2, "<p>updated</p>", {
+        expectedVersion: 3,
+      }),
+    ).rejects.toThrow(OptimisticLockError);
   });
 
   it("returns updated page data", async () => {

@@ -27,6 +27,27 @@ function buildMetafieldInputs(config: ConfirmationFormData) {
 }
 
 /**
+ * Get the current shop's GID (e.g. "gid://shopify/Shop/12345678").
+ * Required for metafieldsSet mutation ownerId.
+ */
+async function getShopGid(admin: AdminApiContext): Promise<string> {
+  const response = await admin.graphql(
+    `#graphql
+    query shopId {
+      shop {
+        id
+      }
+    }`,
+  );
+  const json = await response.json();
+  const id = json.data?.shop?.id;
+  if (!id) {
+    throw new Error("Shop ID を取得できませんでした");
+  }
+  return id;
+}
+
+/**
  * Save confirmation metafields to the Shop resource.
  */
 export async function saveConfirmationMetafields(
@@ -34,6 +55,8 @@ export async function saveConfirmationMetafields(
   config: ConfirmationFormData,
 ): Promise<void> {
   const metafields = buildMetafieldInputs(config);
+  // H-7: Resolve full Shop GID (e.g. gid://shopify/Shop/12345678)
+  const shopGid = await getShopGid(admin);
 
   await withRetry(async () => {
     const response = await admin.graphql(
@@ -55,7 +78,7 @@ export async function saveConfirmationMetafields(
         variables: {
           metafields: metafields.map((mf) => ({
             ...mf,
-            ownerId: "gid://shopify/Shop",
+            ownerId: shopGid,
           })),
         },
       },

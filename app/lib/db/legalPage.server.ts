@@ -195,19 +195,43 @@ export async function publishLegalPage(
 /**
  * Update a published legal page's content and formSchemaVersion.
  * Used by template update flow (re-generate from existing formData).
+ * Optionally updates shopifyPageId (e.g., when Shopify page was recreated).
+ * Uses optimistic locking via expectedVersion.
  */
 export async function updateLegalPageVersion(
   pageId: string,
   newVersion: number,
   contentHtml: string,
+  options?: { shopifyPageId?: string; expectedVersion?: number },
 ) {
+  const data: Record<string, unknown> = {
+    contentHtml,
+    formSchemaVersion: newVersion,
+    version: { increment: 1 },
+  };
+  if (options?.shopifyPageId !== undefined) {
+    data.shopifyPageId = options.shopifyPageId;
+  }
+
+  if (options?.expectedVersion !== undefined) {
+    const result = await db.legalPage.updateMany({
+      where: { id: pageId, version: options.expectedVersion },
+      data: {
+        ...data,
+        version: options.expectedVersion + 1,
+      },
+    });
+    if (result.count === 0) {
+      throw new OptimisticLockError(
+        "このページは別のセッションで更新されています。再読み込みしてください。",
+      );
+    }
+    return db.legalPage.findUniqueOrThrow({ where: { id: pageId } });
+  }
+
   return db.legalPage.update({
     where: { id: pageId },
-    data: {
-      contentHtml,
-      formSchemaVersion: newVersion,
-      version: { increment: 1 },
-    },
+    data,
   });
 }
 

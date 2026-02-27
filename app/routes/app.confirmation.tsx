@@ -184,10 +184,12 @@ export default function ConfirmationPage() {
   const isSaving =
     fetcher.state !== "idle" && fetcher.formData?.get("intent") === "save";
 
-  const fieldErrors =
+  // H-3: Type-safe access to fetcher data
+  const fetcherError =
     fetcher.data && !fetcher.data.success
-      ? (fetcher.data as { errors?: Record<string, string[]> }).errors
-      : undefined;
+      ? (fetcher.data as { success: false; error?: string; errors?: Record<string, string[]> })
+      : null;
+  const fieldErrors = fetcherError?.errors;
 
   return (
     <Page>
@@ -235,9 +237,9 @@ export default function ConfirmationPage() {
                   </Banner>
                 )}
 
-                {fetcher.data && !fetcher.data.success && (fetcher.data as unknown as { error?: string }).error && (
+                {fetcherError?.error && (
                   <Banner tone="critical">
-                    <p>{(fetcher.data as unknown as { error: string }).error}</p>
+                    <p>{fetcherError.error}</p>
                   </Banner>
                 )}
 
