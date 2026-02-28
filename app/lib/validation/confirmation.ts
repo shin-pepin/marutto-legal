@@ -78,9 +78,10 @@ export const CONFIRMATION_DEFAULTS: ConfirmationFormData = {
 
 /**
  * Metafield keys used for storing confirmation settings on Shop resource.
- * Namespace: $app:confirmation (Liquid: app--confirmation)
+ * Regular namespace used so Liquid can access via shop.metafields["marutto_confirmation"]["key"].
+ * ($app: prefix metafields are not directly accessible in Liquid templates.)
  */
-export const CONFIRMATION_METAFIELD_NAMESPACE = "$app:confirmation";
+export const CONFIRMATION_METAFIELD_NAMESPACE = "marutto_confirmation";
 
 export const CONFIRMATION_METAFIELD_KEYS = {
   enabled: "enabled",

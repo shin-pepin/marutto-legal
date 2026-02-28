@@ -113,7 +113,7 @@ describe("CONFIRMATION_DEFAULTS", () => {
 
 describe("CONFIRMATION_METAFIELD constants", () => {
   it("has correct namespace", () => {
-    expect(CONFIRMATION_METAFIELD_NAMESPACE).toBe("$app:confirmation");
+    expect(CONFIRMATION_METAFIELD_NAMESPACE).toBe("marutto_confirmation");
   });
 
   it("has all 8 keys", () => {
