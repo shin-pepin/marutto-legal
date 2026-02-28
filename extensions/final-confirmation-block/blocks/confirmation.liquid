@@ -6,166 +6,200 @@
   Liquid: shop.metafields["marutto_confirmation"]["<key>"]
 {% endcomment %}
 
-{% assign enabled = shop.metafields["marutto_confirmation"]["enabled"].value %}
+{% assign ns = shop.metafields["marutto_confirmation"] %}
+{% assign enabled = ns["enabled"].value %}
 
 {% if enabled == true %}
-  <div class="marutto-confirmation" style="
-    border: 2px solid #d4a017;
-    border-radius: 8px;
-    padding: 20px;
-    margin: 20px 0;
-    background-color: #fffef5;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 14px;
-    line-height: 1.6;
-    color: #333;
-  ">
-    <h3 style="
-      margin: 0 0 16px 0;
-      font-size: 16px;
-      font-weight: 700;
-      color: #333;
-      border-bottom: 1px solid #e5e5e5;
-      padding-bottom: 12px;
-    ">
-      {{ section.settings.title }}
-    </h3>
+  <style>
+    .marutto-confirmation {
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 4px;
+      padding: 24px;
+      margin: 24px 0;
+      font-size: 14px;
+      line-height: 1.7;
+      color: inherit;
+    }
+    .marutto-confirmation__title {
+      margin: 0 0 16px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .marutto-confirmation__items {
+      display: grid;
+      gap: 0;
+    }
+    .marutto-confirmation__item {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 8px;
+      padding: 10px 0;
+      border-top: 1px solid rgba(0, 0, 0, 0.06);
+      font-size: 13px;
+    }
+    .marutto-confirmation__item:last-child {
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+    .marutto-confirmation__label {
+      font-weight: 600;
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.6);
+      padding-top: 1px;
+    }
+    .marutto-confirmation__value {
+      margin: 0;
+      word-break: break-word;
+    }
+    .marutto-confirmation__checkbox-area {
+      margin-top: 16px;
+      padding-top: 16px;
+    }
+    .marutto-confirmation__checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .marutto-confirmation__checkbox-label input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: currentColor;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .marutto-confirmation__warning {
+      margin: 8px 0 0 28px;
+      font-size: 12px;
+      color: #b00;
+      display: none;
+    }
+    @media (max-width: 749px) {
+      .marutto-confirmation__item {
+        grid-template-columns: 1fr;
+        gap: 2px;
+      }
+    }
+  </style>
 
-    {% assign quantity_text = shop.metafields["marutto_confirmation"]["quantity_text"].value %}
-    {% if quantity_text != blank %}
-      <div style="margin-bottom: 12px;">
-        <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 13px; color: #666;">
-          {{ 'confirmation.quantity_label' | t }}
-        </p>
-        <p style="margin: 0;">{{ quantity_text }}</p>
-      </div>
+  <div class="marutto-confirmation">
+    {% if section.settings.title != blank %}
+      <p class="marutto-confirmation__title">{{ section.settings.title }}</p>
     {% endif %}
 
-    {% assign price_text = shop.metafields["marutto_confirmation"]["price_text"].value %}
-    {% if price_text != blank %}
-      <div style="margin-bottom: 12px;">
-        <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 13px; color: #666;">
-          {{ 'confirmation.price_label' | t }}
-        </p>
-        <p style="margin: 0;">{{ price_text }}</p>
-      </div>
-    {% endif %}
+    <div class="marutto-confirmation__items">
+      {% assign quantity_text = ns["quantity_text"].value %}
+      {% if quantity_text != blank %}
+        <div class="marutto-confirmation__item">
+          <span class="marutto-confirmation__label">{{ 'confirmation.quantity_label' | t }}</span>
+          <p class="marutto-confirmation__value">{{ quantity_text }}</p>
+        </div>
+      {% endif %}
 
-    {% assign payment_text = shop.metafields["marutto_confirmation"]["payment_text"].value %}
-    {% if payment_text != blank %}
-      <div style="margin-bottom: 12px;">
-        <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 13px; color: #666;">
-          {{ 'confirmation.payment_label' | t }}
-        </p>
-        <p style="margin: 0;">{{ payment_text }}</p>
-      </div>
-    {% endif %}
+      {% assign price_text = ns["price_text"].value %}
+      {% if price_text != blank %}
+        <div class="marutto-confirmation__item">
+          <span class="marutto-confirmation__label">{{ 'confirmation.price_label' | t }}</span>
+          <p class="marutto-confirmation__value">{{ price_text }}</p>
+        </div>
+      {% endif %}
 
-    {% assign delivery_text = shop.metafields["marutto_confirmation"]["delivery_text"].value %}
-    {% if delivery_text != blank %}
-      <div style="margin-bottom: 12px;">
-        <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 13px; color: #666;">
-          {{ 'confirmation.delivery_label' | t }}
-        </p>
-        <p style="margin: 0;">{{ delivery_text }}</p>
-      </div>
-    {% endif %}
+      {% assign payment_text = ns["payment_text"].value %}
+      {% if payment_text != blank %}
+        <div class="marutto-confirmation__item">
+          <span class="marutto-confirmation__label">{{ 'confirmation.payment_label' | t }}</span>
+          <p class="marutto-confirmation__value">{{ payment_text }}</p>
+        </div>
+      {% endif %}
 
-    {% assign cancellation_text = shop.metafields["marutto_confirmation"]["cancellation_text"].value %}
-    {% if cancellation_text != blank %}
-      <div style="margin-bottom: 12px;">
-        <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 13px; color: #666;">
-          {{ 'confirmation.cancellation_label' | t }}
-        </p>
-        <p style="margin: 0;">{{ cancellation_text }}</p>
-      </div>
-    {% endif %}
+      {% assign delivery_text = ns["delivery_text"].value %}
+      {% if delivery_text != blank %}
+        <div class="marutto-confirmation__item">
+          <span class="marutto-confirmation__label">{{ 'confirmation.delivery_label' | t }}</span>
+          <p class="marutto-confirmation__value">{{ delivery_text }}</p>
+        </div>
+      {% endif %}
 
-    {% assign period_text = shop.metafields["marutto_confirmation"]["period_text"].value %}
-    {% if period_text != blank %}
-      <div style="margin-bottom: 12px;">
-        <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 13px; color: #666;">
-          {{ 'confirmation.period_label' | t }}
-        </p>
-        <p style="margin: 0;">{{ period_text }}</p>
-      </div>
-    {% endif %}
+      {% assign cancellation_text = ns["cancellation_text"].value %}
+      {% if cancellation_text != blank %}
+        <div class="marutto-confirmation__item">
+          <span class="marutto-confirmation__label">{{ 'confirmation.cancellation_label' | t }}</span>
+          <p class="marutto-confirmation__value">{{ cancellation_text }}</p>
+        </div>
+      {% endif %}
+
+      {% assign period_text = ns["period_text"].value %}
+      {% if period_text != blank %}
+        <div class="marutto-confirmation__item">
+          <span class="marutto-confirmation__label">{{ 'confirmation.period_label' | t }}</span>
+          <p class="marutto-confirmation__value">{{ period_text }}</p>
+        </div>
+      {% endif %}
+    </div>
 
     {% if section.settings.show_checkbox %}
-      {% assign checkbox_label = shop.metafields["marutto_confirmation"]["checkbox_label"].value %}
+      {% assign checkbox_label = ns["checkbox_label"].value %}
+      {% assign has_label = false %}
       {% if checkbox_label != blank %}
-        <div style="
-          margin-top: 16px;
-          padding-top: 12px;
-          border-top: 1px solid #e5e5e5;
-        ">
-          <label style="
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-            cursor: pointer;
-            font-size: 14px;
-          ">
-            <input
-              type="checkbox"
-              id="marutto-confirmation-checkbox"
-              style="margin-top: 3px; width: 16px; height: 16px;"
-            >
-            <span>{{ checkbox_label }}</span>
-          </label>
-          <p id="marutto-confirmation-warning" style="
-            margin: 8px 0 0 0;
-            font-size: 12px;
-            color: #c00;
-            display: none;
-          ">
-            {{ 'confirmation.checkbox_required' | t }}
-          </p>
-        </div>
-
-        <script>
-          (function() {
-            var checkbox = document.getElementById('marutto-confirmation-checkbox');
-            var warning = document.getElementById('marutto-confirmation-warning');
-            if (!checkbox) return;
-
-            /* Selectors for common checkout/submit buttons on the cart page */
-            var BTN_SELECTORS = [
-              '[name="checkout"]',
-              'button[type="submit"][name="checkout"]',
-              'input[type="submit"][name="checkout"]',
-              '.shopify-payment-button button',
-              '.cart__checkout-button',
-              '[data-shopify="payment-button"] button'
-            ].join(',');
-
-            function getButtons() {
-              return document.querySelectorAll(BTN_SELECTORS);
-            }
-
-            function toggle() {
-              var checked = checkbox.checked;
-              var buttons = getButtons();
-              for (var i = 0; i < buttons.length; i++) {
-                buttons[i].disabled = !checked;
-                buttons[i].style.opacity = checked ? '' : '0.5';
-                buttons[i].style.pointerEvents = checked ? '' : 'none';
-              }
-              warning.style.display = checked ? 'none' : 'block';
-            }
-
-            checkbox.addEventListener('change', toggle);
-
-            /* Initial state: buttons disabled until checked */
-            toggle();
-
-            /* Re-apply after DOM changes (dynamic cart updates) */
-            var observer = new MutationObserver(function() { toggle(); });
-            var cart = document.querySelector('form[action="/cart"]') || document.body;
-            observer.observe(cart, { childList: true, subtree: true });
-          })();
-        </script>
+        {% assign has_label = true %}
       {% endif %}
+      {% unless has_label %}
+        {% assign checkbox_label = "上記の内容を確認しました" %}
+      {% endunless %}
+
+      <div class="marutto-confirmation__checkbox-area">
+        <label class="marutto-confirmation__checkbox-label">
+          <input
+            type="checkbox"
+            id="marutto-confirmation-checkbox"
+          >
+          <span>{{ checkbox_label }}</span>
+        </label>
+        <p class="marutto-confirmation__warning" id="marutto-confirmation-warning">
+          {{ 'confirmation.checkbox_required' | t }}
+        </p>
+      </div>
+
+      <script>
+        (function() {
+          var checkbox = document.getElementById('marutto-confirmation-checkbox');
+          var warning = document.getElementById('marutto-confirmation-warning');
+          if (!checkbox) return;
+
+          var BTN_SELECTORS = [
+            '[name="checkout"]',
+            'button[type="submit"][name="checkout"]',
+            'input[type="submit"][name="checkout"]',
+            '.shopify-payment-button button',
+            '.cart__checkout-button',
+            '[data-shopify="payment-button"] button'
+          ].join(',');
+
+          function getButtons() {
+            return document.querySelectorAll(BTN_SELECTORS);
+          }
+
+          function toggle() {
+            var checked = checkbox.checked;
+            var buttons = getButtons();
+            for (var i = 0; i < buttons.length; i++) {
+              buttons[i].disabled = !checked;
+              buttons[i].style.opacity = checked ? '' : '0.5';
+              buttons[i].style.pointerEvents = checked ? '' : 'none';
+            }
+            warning.style.display = checked ? 'none' : 'block';
+          }
+
+          checkbox.addEventListener('change', toggle);
+          toggle();
+
+          var observer = new MutationObserver(function() { toggle(); });
+          var cart = document.querySelector('form[action="/cart"]') || document.body;
+          observer.observe(cart, { childList: true, subtree: true });
+        })();
+      </script>
     {% endif %}
   </div>
 {% endif %}
