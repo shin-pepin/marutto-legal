@@ -3,6 +3,7 @@ api_version = "2026-01"
 [[extensions]]
 name = "最終確認画面"
 handle = "final-confirmation-block"
+uid = "8282b869-011a-e38b-6a3e-241a176b8d2d1dba0856"
 type = "theme"
 
 [extensions.capabilities]
