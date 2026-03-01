@@ -10,7 +10,7 @@
 {% assign enabled = ns["enabled"].value %}
 
 {% if enabled == true %}
-  {% assign block_title = section.settings.title | default: "ご注文に関する重要事項" %}
+  {% assign block_title = block.settings.title | default: "ご注文に関する重要事項" %}
 
   <style>
     .marutto-confirmation {
@@ -56,30 +56,6 @@
     .marutto-confirmation__value {
       margin: 0;
       word-break: break-word;
-    }
-    .marutto-confirmation__checkbox-area {
-      margin-top: 12px;
-    }
-    .marutto-confirmation__checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-    }
-    .marutto-confirmation__checkbox-label input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      accent-color: currentColor;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-    .marutto-confirmation__warning {
-      margin: 8px 0 0 28px;
-      font-size: 12px;
-      color: #b00;
-      display: none;
     }
   </style>
 
@@ -136,69 +112,6 @@
         {% endif %}
       </div>
     </details>
-
-    {% assign checkbox_label = ns["checkbox_label"].value %}
-    {% if checkbox_label == blank %}
-      {% assign checkbox_label = "上記の内容を確認しました" %}
-    {% endif %}
-
-    {% if section.settings.show_checkbox %}
-    <div class="marutto-confirmation__checkbox-area">
-      <label class="marutto-confirmation__checkbox-label">
-        <input
-          type="checkbox"
-          id="marutto-confirmation-checkbox"
-          aria-describedby="marutto-confirmation-warning"
-        >
-        <span>{{ checkbox_label }}</span>
-      </label>
-      <p class="marutto-confirmation__warning" id="marutto-confirmation-warning">
-        {{ 'confirmation.checkbox_required' | t }}
-      </p>
-    </div>
-    {% endif %}
-
-    {% if section.settings.show_checkbox %}
-    <script>
-      (function() {
-        var checkbox = document.getElementById('marutto-confirmation-checkbox');
-        var warning = document.getElementById('marutto-confirmation-warning');
-        if (!checkbox) return;
-
-        var BTN_SELECTORS = [
-          '[name="checkout"]',
-          'button[type="submit"][name="checkout"]',
-          'input[type="submit"][name="checkout"]',
-          '.shopify-payment-button button',
-          '[data-shopify="payment-button"] button'
-        ].join(',');
-
-        function getButtons() {
-          return document.querySelectorAll(BTN_SELECTORS);
-        }
-
-        function toggle() {
-          var checked = checkbox.checked;
-          var buttons = getButtons();
-          for (var i = 0; i < buttons.length; i++) {
-            buttons[i].disabled = !checked;
-            buttons[i].style.opacity = checked ? '' : '0.5';
-            buttons[i].style.pointerEvents = checked ? '' : 'none';
-          }
-          if (warning) warning.style.display = checked ? 'none' : 'block';
-        }
-
-        checkbox.addEventListener('change', toggle);
-        toggle();
-
-        var cartForm = document.querySelector('form[action="/cart"]');
-        if (cartForm) {
-          var observer = new MutationObserver(function() { toggle(); });
-          observer.observe(cartForm, { childList: true, subtree: true });
-        }
-      })();
-    </script>
-    {% endif %}
   </div>
 {% endif %}
 
@@ -212,12 +125,6 @@
       "id": "title",
       "label": "タイトル",
       "default": "ご注文に関する重要事項"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_checkbox",
-      "label": "確認チェックボックスを表示",
-      "default": true
     }
   ]
 }

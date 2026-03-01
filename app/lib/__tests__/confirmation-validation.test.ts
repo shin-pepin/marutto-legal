@@ -58,12 +58,6 @@ describe("confirmationSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects empty checkboxLabel when enabled", () => {
-    const data = { ...CONFIRMATION_DEFAULTS, enabled: true, checkboxLabel: "" };
-    const result = confirmationSchema.safeParse(data);
-    expect(result.success).toBe(false);
-  });
-
   it("allows empty text fields when disabled", () => {
     const data = {
       enabled: false,
@@ -73,7 +67,6 @@ describe("confirmationSchema", () => {
       deliveryText: "",
       cancellationText: "",
       periodText: "",
-      checkboxLabel: "",
     };
     const result = confirmationSchema.safeParse(data);
     expect(result.success).toBe(true);
@@ -107,7 +100,6 @@ describe("CONFIRMATION_DEFAULTS", () => {
     expect(CONFIRMATION_DEFAULTS.deliveryText).toBeTruthy();
     expect(CONFIRMATION_DEFAULTS.cancellationText).toBeTruthy();
     expect(CONFIRMATION_DEFAULTS.periodText).toBeTruthy();
-    expect(CONFIRMATION_DEFAULTS.checkboxLabel).toBeTruthy();
   });
 });
 
@@ -116,9 +108,9 @@ describe("CONFIRMATION_METAFIELD constants", () => {
     expect(CONFIRMATION_METAFIELD_NAMESPACE).toBe("marutto_confirmation");
   });
 
-  it("has all 8 keys", () => {
+  it("has all 7 keys", () => {
     const keys = Object.keys(CONFIRMATION_METAFIELD_KEYS);
-    expect(keys).toHaveLength(8);
+    expect(keys).toHaveLength(7);
     expect(keys).toContain("enabled");
     expect(keys).toContain("quantityText");
     expect(keys).toContain("priceText");
@@ -126,12 +118,10 @@ describe("CONFIRMATION_METAFIELD constants", () => {
     expect(keys).toContain("deliveryText");
     expect(keys).toContain("cancellationText");
     expect(keys).toContain("periodText");
-    expect(keys).toContain("checkboxLabel");
   });
 
   it("maps keys to snake_case metafield keys", () => {
     expect(CONFIRMATION_METAFIELD_KEYS.quantityText).toBe("quantity_text");
     expect(CONFIRMATION_METAFIELD_KEYS.priceText).toBe("price_text");
-    expect(CONFIRMATION_METAFIELD_KEYS.checkboxLabel).toBe("checkbox_label");
   });
 });

@@ -3,6 +3,7 @@
 api_version = "2025-07"
 
 [[extensions]]
+uid = "860a139f-6bc8-230e-9234-86ee6d4e16d00fed301f"
 type = "ui_extension"
 name = "最終確認画面（チェックアウト）"
 handle = "checkout-confirmation-block"

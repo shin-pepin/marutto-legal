@@ -75,7 +75,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       deliveryText: formPayload.get("deliveryText") as string || "",
       cancellationText: formPayload.get("cancellationText") as string || "",
       periodText: formPayload.get("periodText") as string || "",
-      checkboxLabel: formPayload.get("checkboxLabel") as string || "",
     };
 
     // Validate
@@ -132,11 +131,6 @@ const FIELD_LABELS: Record<keyof Omit<ConfirmationFormData, "enabled">, { label:
   periodText: {
     label: "⑥ 申込期間",
     helpText: "商品の販売期間に関する表示内容（期間限定でない場合はその旨を記載）",
-    multiline: false,
-  },
-  checkboxLabel: {
-    label: "チェックボックスラベル",
-    helpText: "お客様が確認済みであることを示すチェックボックスのラベル文言",
     multiline: false,
   },
 };

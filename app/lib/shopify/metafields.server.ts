@@ -22,7 +22,6 @@ function buildMetafieldInputs(config: ConfirmationFormData) {
     { namespace: ns, key: keys.deliveryText, type: "multi_line_text_field", value: config.deliveryText },
     { namespace: ns, key: keys.cancellationText, type: "multi_line_text_field", value: config.cancellationText },
     { namespace: ns, key: keys.periodText, type: "single_line_text_field", value: config.periodText },
-    { namespace: ns, key: keys.checkboxLabel, type: "single_line_text_field", value: config.checkboxLabel },
   ];
 }
 
@@ -124,7 +123,6 @@ export async function getConfirmationMetafields(
           delivery_text: metafield(namespace: $ns, key: "delivery_text") { value }
           cancellation_text: metafield(namespace: $ns, key: "cancellation_text") { value }
           period_text: metafield(namespace: $ns, key: "period_text") { value }
-          checkbox_label: metafield(namespace: $ns, key: "checkbox_label") { value }
         }
       }`,
       {
@@ -152,6 +150,5 @@ export async function getConfirmationMetafields(
     deliveryText: val("delivery_text") || CONFIRMATION_DEFAULTS.deliveryText,
     cancellationText: val("cancellation_text") || CONFIRMATION_DEFAULTS.cancellationText,
     periodText: val("period_text") || CONFIRMATION_DEFAULTS.periodText,
-    checkboxLabel: val("checkbox_label") || CONFIRMATION_DEFAULTS.checkboxLabel,
   };
 }

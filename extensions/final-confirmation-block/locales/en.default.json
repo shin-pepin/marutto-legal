@@ -5,7 +5,6 @@
     "payment_label": "Payment Method & Timing",
     "delivery_label": "Delivery",
     "cancellation_label": "Cancellation & Returns",
-    "period_label": "Offer Period",
-    "checkbox_required": "Please confirm the above information by checking the box to proceed with checkout."
+    "period_label": "Offer Period"
   }
 }

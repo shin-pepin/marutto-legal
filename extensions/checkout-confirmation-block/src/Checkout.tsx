@@ -55,7 +55,7 @@ function ConfirmationAccordion({
 
   return (
     <Disclosure open={openIds} onToggle={setOpenIds}>
-      <Pressable toggles={CONTENT_ID} padding="base">
+      <Pressable toggles={CONTENT_ID} padding={["base", "none", "base", "none"]}>
         <InlineStack spacing="tight" blockAlignment="center">
           <Icon
             source={isOpen ? "chevronDown" : "chevronRight"}
@@ -66,7 +66,7 @@ function ConfirmationAccordion({
           </Text>
         </InlineStack>
       </Pressable>
-      <View id={CONTENT_ID} padding={["none", "base", "base", "base"]}>
+      <View id={CONTENT_ID} padding={["none", "none", "base", "none"]}>
         <BlockStack spacing="none">
           {items.map((item, idx) => (
             <View key={item.key}>
