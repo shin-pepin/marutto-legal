@@ -29,6 +29,8 @@ function buildMetafieldInputs(config: ConfirmationFormData) {
 /**
  * Get the current shop's GID (e.g. "gid://shopify/Shop/12345678").
  * Required for metafieldsSet mutation ownerId.
+ * Note: No module-level cache — multi-tenant environment where different
+ * shops share the same process would cause cross-store data writes.
  */
 async function getShopGid(admin: AdminApiContext): Promise<string> {
   const response = await admin.graphql(
@@ -101,31 +103,32 @@ export async function saveConfirmationMetafields(
 
 /**
  * Get confirmation metafields from the Shop resource.
+ * Uses individual metafield() accessors (not the metafields connection)
+ * because the connection filter does NOT resolve the $app: namespace prefix.
  * Returns parsed ConfirmationFormData, falling back to defaults for missing fields.
  */
 export async function getConfirmationMetafields(
   admin: AdminApiContext,
 ): Promise<ConfirmationFormData> {
   const ns = CONFIRMATION_METAFIELD_NAMESPACE;
-  const keys = Object.values(CONFIRMATION_METAFIELD_KEYS);
 
   const result = await withRetry(async () => {
     const response = await admin.graphql(
       `#graphql
-      query getShopMetafields($namespace: String!, $keys: [String!]!) {
+      query getConfirmationMetafields($ns: String!) {
         shop {
-          metafields(namespace: $namespace, keys: $keys, first: 20) {
-            edges {
-              node {
-                key
-                value
-              }
-            }
-          }
+          enabled: metafield(namespace: $ns, key: "enabled") { value }
+          quantity_text: metafield(namespace: $ns, key: "quantity_text") { value }
+          price_text: metafield(namespace: $ns, key: "price_text") { value }
+          payment_text: metafield(namespace: $ns, key: "payment_text") { value }
+          delivery_text: metafield(namespace: $ns, key: "delivery_text") { value }
+          cancellation_text: metafield(namespace: $ns, key: "cancellation_text") { value }
+          period_text: metafield(namespace: $ns, key: "period_text") { value }
+          checkbox_label: metafield(namespace: $ns, key: "checkbox_label") { value }
         }
       }`,
       {
-        variables: { namespace: ns, keys },
+        variables: { ns },
       },
     );
 
@@ -138,25 +141,17 @@ export async function getConfirmationMetafields(
     return json;
   });
 
-  // Build a key-value map from the response
-  const edges = result.data?.shop?.metafields?.edges ?? [];
-  const metaMap = new Map<string, string>();
-  for (const edge of edges) {
-    if (edge.node) {
-      metaMap.set(edge.node.key, edge.node.value);
-    }
-  }
-
-  const k = CONFIRMATION_METAFIELD_KEYS;
+  const shop = result.data?.shop ?? {};
+  const val = (alias: string) => shop[alias]?.value as string | undefined;
 
   return {
-    enabled: metaMap.get(k.enabled) === "true",
-    quantityText: metaMap.get(k.quantityText) || CONFIRMATION_DEFAULTS.quantityText,
-    priceText: metaMap.get(k.priceText) || CONFIRMATION_DEFAULTS.priceText,
-    paymentText: metaMap.get(k.paymentText) || CONFIRMATION_DEFAULTS.paymentText,
-    deliveryText: metaMap.get(k.deliveryText) || CONFIRMATION_DEFAULTS.deliveryText,
-    cancellationText: metaMap.get(k.cancellationText) || CONFIRMATION_DEFAULTS.cancellationText,
-    periodText: metaMap.get(k.periodText) || CONFIRMATION_DEFAULTS.periodText,
-    checkboxLabel: metaMap.get(k.checkboxLabel) || CONFIRMATION_DEFAULTS.checkboxLabel,
+    enabled: val("enabled") === "true",
+    quantityText: val("quantity_text") || CONFIRMATION_DEFAULTS.quantityText,
+    priceText: val("price_text") || CONFIRMATION_DEFAULTS.priceText,
+    paymentText: val("payment_text") || CONFIRMATION_DEFAULTS.paymentText,
+    deliveryText: val("delivery_text") || CONFIRMATION_DEFAULTS.deliveryText,
+    cancellationText: val("cancellation_text") || CONFIRMATION_DEFAULTS.cancellationText,
+    periodText: val("period_text") || CONFIRMATION_DEFAULTS.periodText,
+    checkboxLabel: val("checkbox_label") || CONFIRMATION_DEFAULTS.checkboxLabel,
   };
 }
