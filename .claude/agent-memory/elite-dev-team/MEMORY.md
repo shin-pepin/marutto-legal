@@ -39,6 +39,16 @@
 - T4: Template versioning via formSchemaVersion column + PageTypeConfig.templateVersion
 - T4: Confirmation data stored in Shop metafields ($app:confirmation namespace)
 - T4: Theme App Extension for cart page confirmation display
+- T4: Checkout UI Extension (checkout-confirmation-block) for checkout page confirmation (display-only, no checkbox)
+
+## Shopify Checkout UI Extension Notes
+- Disclosure/Pressable components: supported in api_version 2025-07, NOT supported in 2025-10+/2026-01
+- Details/Summary (Web Components): supported in 2025-10+/2026-01 but no React wrapper
+- For React-based checkout extensions, use api_version 2025-07 with @shopify/ui-extensions@2025.7.4 + @shopify/ui-extensions-react@2025.7.4
+- @shopify/ui-extensions-react peer depends on matching @shopify/ui-extensions version
+- Checkout UI Extension runs in Remote UI sandbox (no DOM, no innerHTML, XSS-safe by design)
+- useAppMetafields({type:"shop"}) reads shop-level metafields declared in shopify.extension.toml
+- marutto_confirmation namespace (not $app:) because Liquid extension also needs access
 
 ## Key File Paths
 - Wizard route: app/routes/app.wizard.$pageType.tsx
@@ -54,7 +64,8 @@
 - DB layer: app/lib/db/legalPage.server.ts, store.server.ts
 - Webhooks: app/routes/webhooks.app.{uninstalled,subscriptions_update}.tsx
 - Tests: app/lib/__tests__/ + app/routes/__tests__/
-- Extension: extensions/final-confirmation-block/
+- Extension (cart/Liquid): extensions/final-confirmation-block/
+- Extension (checkout/React): extensions/checkout-confirmation-block/
 - DevOps: Dockerfile, litestream.yml, scripts/run.sh, fly.toml
 
 ## Patterns & Conventions
