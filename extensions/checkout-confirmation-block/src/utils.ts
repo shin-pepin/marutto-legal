@@ -35,8 +35,15 @@ export function buildMetafieldMap(
   const map = new Map<string, string>();
   for (const entry of metafields) {
     const { key } = entry.metafield;
+    // enabled metafield is stored as boolean type — Shopify may return
+    // JS boolean rather than string. Convert boolean to string to handle both.
+    const raw = entry.metafield.value;
     const value =
-      typeof entry.metafield.value === "string" ? entry.metafield.value : "";
+      typeof raw === "string"
+        ? raw
+        : typeof raw === "boolean"
+          ? String(raw)
+          : "";
     if (value) map.set(key, value);
   }
   return map;

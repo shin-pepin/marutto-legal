@@ -49,7 +49,8 @@ function ConfirmationAccordion({
   title: string;
   items: LegalItem[];
 }) {
-  const [openIds, setOpenIds] = useState<string[]>([]);
+  // Default open: 特商法第12条の6「明確かつ目立つ方法」での表示義務
+  const [openIds, setOpenIds] = useState<string[]>([CONTENT_ID]);
   const isOpen = openIds.includes(CONTENT_ID);
 
   return (

@@ -142,11 +142,13 @@
       {% assign checkbox_label = "上記の内容を確認しました" %}
     {% endif %}
 
+    {% if section.settings.show_checkbox %}
     <div class="marutto-confirmation__checkbox-area">
       <label class="marutto-confirmation__checkbox-label">
         <input
           type="checkbox"
           id="marutto-confirmation-checkbox"
+          aria-describedby="marutto-confirmation-warning"
         >
         <span>{{ checkbox_label }}</span>
       </label>
@@ -154,7 +156,9 @@
         {{ 'confirmation.checkbox_required' | t }}
       </p>
     </div>
+    {% endif %}
 
+    {% if section.settings.show_checkbox %}
     <script>
       (function() {
         var checkbox = document.getElementById('marutto-confirmation-checkbox');
@@ -166,7 +170,6 @@
           'button[type="submit"][name="checkout"]',
           'input[type="submit"][name="checkout"]',
           '.shopify-payment-button button',
-          '.cart__checkout-button',
           '[data-shopify="payment-button"] button'
         ].join(',');
 
@@ -182,17 +185,20 @@
             buttons[i].style.opacity = checked ? '' : '0.5';
             buttons[i].style.pointerEvents = checked ? '' : 'none';
           }
-          warning.style.display = checked ? 'none' : 'block';
+          if (warning) warning.style.display = checked ? 'none' : 'block';
         }
 
         checkbox.addEventListener('change', toggle);
         toggle();
 
-        var observer = new MutationObserver(function() { toggle(); });
-        var cart = document.querySelector('form[action="/cart"]') || document.body;
-        observer.observe(cart, { childList: true, subtree: true });
+        var cartForm = document.querySelector('form[action="/cart"]');
+        if (cartForm) {
+          var observer = new MutationObserver(function() { toggle(); });
+          observer.observe(cartForm, { childList: true, subtree: true });
+        }
       })();
     </script>
+    {% endif %}
   </div>
 {% endif %}
 

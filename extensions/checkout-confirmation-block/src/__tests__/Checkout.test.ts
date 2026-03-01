@@ -16,12 +16,19 @@ describe("buildMetafieldMap", () => {
     expect(map.get("quantity_text")).toBe("カート内の数量");
   });
 
-  it("ignores non-string values", () => {
+  it("converts boolean values to string", () => {
     const map = buildMetafieldMap([
       { metafield: { key: "enabled", value: true } },
+      { metafield: { key: "disabled", value: false } },
+    ]);
+    expect(map.get("enabled")).toBe("true");
+    expect(map.get("disabled")).toBe("false");
+  });
+
+  it("ignores number values", () => {
+    const map = buildMetafieldMap([
       { metafield: { key: "count", value: 42 } },
     ]);
-    expect(map.has("enabled")).toBe(false);
     expect(map.has("count")).toBe(false);
   });
 
@@ -111,7 +118,7 @@ describe("collectLegalItems", () => {
 
 describe("enabled flag behavior", () => {
   it("only 'true' string should be treated as enabled", () => {
-    const cases = [
+    const cases: { value: string | boolean; expected: boolean }[] = [
       { value: "true", expected: true },
       { value: "false", expected: false },
       { value: "TRUE", expected: false },
@@ -120,13 +127,28 @@ describe("enabled flag behavior", () => {
     ];
 
     for (const { value, expected } of cases) {
-      const mfMap = buildMetafieldMap(
-        value
-          ? [{ metafield: { key: "enabled", value } }]
-          : [],
-      );
+      const entries = value !== ""
+        ? [{ metafield: { key: "enabled", value } }]
+        : [];
+      const mfMap = buildMetafieldMap(entries);
       expect(mfMap.get("enabled") === "true").toBe(expected);
     }
+  });
+
+  it("boolean true from Shopify API is treated as enabled", () => {
+    const mfMap = buildMetafieldMap([
+      { metafield: { key: "enabled", value: true } },
+    ]);
+    expect(mfMap.get("enabled")).toBe("true");
+    expect(mfMap.get("enabled") === "true").toBe(true);
+  });
+
+  it("boolean false from Shopify API is treated as disabled", () => {
+    const mfMap = buildMetafieldMap([
+      { metafield: { key: "enabled", value: false } },
+    ]);
+    expect(mfMap.get("enabled")).toBe("false");
+    expect(mfMap.get("enabled") === "true").toBe(false);
   });
 
   it("undefined enabled value is treated as disabled", () => {
