@@ -299,7 +299,7 @@ export default function DashboardPage() {
                   content: "プライバシーポリシーを作成する",
                   onAction: () => navigate("/app/wizard/privacy"),
                 }}
-                image=""
+                image="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'/%3E"
               >
                 <p>
                   フォームに入力するだけで、ECサイトに必要な法的ページを自動生成できます。

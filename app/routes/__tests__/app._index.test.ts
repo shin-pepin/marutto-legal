@@ -146,6 +146,7 @@ describe("Dashboard loader (app._index)", () => {
     expect(data.pages).toHaveLength(1);
     expect(data.pages[0].pageType).toBe("tokushoho");
     expect(data.pages[0].status).toBe("published");
+    expect(data.pages[0].updatedAt).toBe("2024-01-01T00:00:00.000Z");
   });
 
   it("does not leak formData or contentHtml to client", async () => {
