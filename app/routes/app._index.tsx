@@ -118,7 +118,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       pageType: p.pageType,
       status: p.status,
       shopifyPageId: p.shopifyPageId,
-      updatedAt: p.updatedAt as unknown as string,
+      updatedAt: p.updatedAt.toISOString(),
       formSchemaVersion: p.formSchemaVersion,
       hasTemplateUpdate: pending.length > 0,
       pendingUpdates: pending,
@@ -299,7 +299,8 @@ export default function DashboardPage() {
                   content: "プライバシーポリシーを作成する",
                   onAction: () => navigate("/app/wizard/privacy"),
                 }}
-                image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+                // Polaris 12.x requires image prop; use transparent SVG to render without illustration
+                image="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'/%3E"
               >
                 <p>
                   フォームに入力するだけで、ECサイトに必要な法的ページを自動生成できます。

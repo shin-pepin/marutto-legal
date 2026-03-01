@@ -228,6 +228,7 @@ export default function ConfirmationPage() {
                   <p>
                     2022年改正特商法（第12条の6）により、最終確認画面に6項目の表示が義務付けられています。
                     以下の内容はカートページにTheme App Extensionとして表示されます。
+                    なお、チェックアウトページへの表示は Shopify Plus プランのストアのみ対応しています。
                   </p>
                 </Banner>
 
@@ -299,9 +300,14 @@ export default function ConfirmationPage() {
 
                 <Card>
                   <BlockStack gap="200">
-                    <Text as="h3" variant="headingMd">
-                      テーマへの追加方法
-                    </Text>
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Text as="h3" variant="headingMd">
+                        テーマへの追加方法
+                      </Text>
+                      <Button url="shopify:admin/themes/current/editor?template=cart">
+                        テーマエディタを開く
+                      </Button>
+                    </InlineStack>
                     <Text as="p" variant="bodySm" tone="subdued">
                       1. Shopify管理画面 → 「オンラインストア」→「テーマ」→「カスタマイズ」
                     </Text>
