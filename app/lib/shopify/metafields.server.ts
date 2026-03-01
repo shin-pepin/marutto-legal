@@ -29,13 +29,10 @@ function buildMetafieldInputs(config: ConfirmationFormData) {
 /**
  * Get the current shop's GID (e.g. "gid://shopify/Shop/12345678").
  * Required for metafieldsSet mutation ownerId.
- * Cached per-request to avoid redundant GraphQL calls.
+ * Note: No module-level cache — multi-tenant environment where different
+ * shops share the same process would cause cross-store data writes.
  */
-let cachedShopGid: string | null = null;
-
 async function getShopGid(admin: AdminApiContext): Promise<string> {
-  if (cachedShopGid) return cachedShopGid;
-
   const response = await admin.graphql(
     `#graphql
     query shopId {
@@ -49,7 +46,6 @@ async function getShopGid(admin: AdminApiContext): Promise<string> {
   if (!id) {
     throw new Error("Shop ID を取得できませんでした");
   }
-  cachedShopGid = id;
   return id;
 }
 
