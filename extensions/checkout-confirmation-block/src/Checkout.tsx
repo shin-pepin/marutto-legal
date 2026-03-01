@@ -7,30 +7,15 @@ import {
   BlockStack,
   Disclosure,
   Pressable,
+  InlineStack,
   View,
   Text,
+  TextBlock,
   Divider,
+  Icon,
 } from "@shopify/ui-extensions-react/checkout";
-
-/** Metafield keys that map to the 6 legal items */
-const ITEM_KEYS = [
-  "quantity_text",
-  "price_text",
-  "payment_text",
-  "delivery_text",
-  "cancellation_text",
-  "period_text",
-] as const;
-
-/** Translate key for each item label */
-const LABEL_KEYS: Record<(typeof ITEM_KEYS)[number], string> = {
-  quantity_text: "quantity_label",
-  price_text: "price_label",
-  payment_text: "payment_label",
-  delivery_text: "delivery_label",
-  cancellation_text: "cancellation_label",
-  period_text: "period_label",
-};
+import { buildMetafieldMap, collectLegalItems } from "./utils";
+import type { LegalItem } from "./utils";
 
 const CONTENT_ID = "confirmation-content";
 
@@ -42,24 +27,12 @@ function CheckoutConfirmation() {
     namespace: "marutto_confirmation",
   });
 
-  // Build a key→value map from metafields
-  const mfMap = new Map<string, string>();
-  for (const entry of metafields) {
-    const { key } = entry.metafield;
-    const value =
-      typeof entry.metafield.value === "string" ? entry.metafield.value : "";
-    if (value) mfMap.set(key, value);
-  }
+  const mfMap = buildMetafieldMap(metafields);
 
-  // Check enabled flag
+  // Check enabled flag -- safe-by-default: anything other than "true" disables
   if (mfMap.get("enabled") !== "true") return null;
 
-  // Collect non-empty items
-  const items = ITEM_KEYS.filter((k) => mfMap.has(k)).map((k) => ({
-    key: k,
-    label: translate(LABEL_KEYS[k]),
-    value: mfMap.get(k)!,
-  }));
+  const items = collectLegalItems(mfMap, translate);
 
   // Nothing to show
   if (items.length === 0) return null;
@@ -74,7 +47,7 @@ function ConfirmationAccordion({
   items,
 }: {
   title: string;
-  items: { key: string; label: string; value: string }[];
+  items: LegalItem[];
 }) {
   const [openIds, setOpenIds] = useState<string[]>([]);
   const isOpen = openIds.includes(CONTENT_ID);
@@ -82,10 +55,15 @@ function ConfirmationAccordion({
   return (
     <Disclosure open={openIds} onToggle={setOpenIds}>
       <Pressable toggles={CONTENT_ID} padding="base">
-        <Text size="base" emphasis="bold">
-          {isOpen ? "▼ " : "▶ "}
-          {title}
-        </Text>
+        <InlineStack spacing="tight" blockAlignment="center">
+          <Icon
+            source={isOpen ? "chevronDown" : "chevronRight"}
+            size="small"
+          />
+          <Text size="base" emphasis="bold">
+            {title}
+          </Text>
+        </InlineStack>
       </Pressable>
       <View id={CONTENT_ID} padding={["none", "base", "base", "base"]}>
         <BlockStack spacing="none">
@@ -97,7 +75,7 @@ function ConfirmationAccordion({
                   <Text size="small" appearance="subdued" emphasis="bold">
                     {item.label}
                   </Text>
-                  <Text size="small">{item.value}</Text>
+                  <TextBlock size="small">{item.value}</TextBlock>
                 </BlockStack>
               </View>
             </View>
