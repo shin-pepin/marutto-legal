@@ -7,6 +7,7 @@ import {
   InlineStack,
   Icon,
   Box,
+  Banner,
 } from "@shopify/polaris";
 import { CheckCircleIcon } from "@shopify/polaris-icons";
 
@@ -47,9 +48,17 @@ export function CompletionScreen({
         <Text as="p" alignment="center">
           {pageTypeTitle}ページが正常に
           {isUpdate ? "更新" : "作成"}されました。
-          {!isUpdate &&
-            "ページは非公開で作成されています。Shopify管理画面から公開設定を行ってください。"}
         </Text>
+
+        {!isUpdate && (
+          <Banner tone="info">
+            <p>
+              ページは非公開で作成されています。
+              下の「Shopify管理画面で確認」ボタンからページを開き、
+              「公開」ステータスに変更してください。
+            </p>
+          </Banner>
+        )}
 
         <InlineStack align="center" gap="300">
           {shopifyAdminPageId && (

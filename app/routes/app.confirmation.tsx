@@ -314,8 +314,21 @@ export default function ConfirmationPage() {
                     <Text as="p" variant="bodySm" tone="subdued">
                       4. 保存して公開
                     </Text>
+                    <Button
+                      url="shopify:admin/themes/current/editor"
+                      target="_blank"
+                    >
+                      テーマエディタを開く
+                    </Button>
                   </BlockStack>
                 </Card>
+
+                <Banner tone="info">
+                  <p>
+                    チェックアウトページへの表示は Shopify Plus プランのストアのみ対応しています。
+                    カートページへの表示は全プランでご利用いただけます。
+                  </p>
+                </Banner>
               </>
             )}
           </BlockStack>

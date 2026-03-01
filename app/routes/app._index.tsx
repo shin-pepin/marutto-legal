@@ -118,7 +118,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       pageType: p.pageType,
       status: p.status,
       shopifyPageId: p.shopifyPageId,
-      updatedAt: p.updatedAt as unknown as string,
+      updatedAt: p.updatedAt.toISOString(),
       formSchemaVersion: p.formSchemaVersion,
       hasTemplateUpdate: pending.length > 0,
       pendingUpdates: pending,
@@ -299,7 +299,7 @@ export default function DashboardPage() {
                   content: "プライバシーポリシーを作成する",
                   onAction: () => navigate("/app/wizard/privacy"),
                 }}
-                image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+                image=""
               >
                 <p>
                   フォームに入力するだけで、ECサイトに必要な法的ページを自動生成できます。
