@@ -299,6 +299,7 @@ export default function DashboardPage() {
                   content: "プライバシーポリシーを作成する",
                   onAction: () => navigate("/app/wizard/privacy"),
                 }}
+                // Polaris 12.x requires image prop; use transparent SVG to render without illustration
                 image="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'/%3E"
               >
                 <p>

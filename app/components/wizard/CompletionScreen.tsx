@@ -54,8 +54,7 @@ export function CompletionScreen({
           <Banner tone="info">
             <p>
               ページは非公開で作成されています。
-              下のボタンからShopify管理画面でページを開き、
-              「公開」ステータスに変更してください。
+              Shopify管理画面でページを開き、「公開」ステータスに変更してください。
             </p>
           </Banner>
         )}
