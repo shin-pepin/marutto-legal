@@ -10,7 +10,7 @@
 {% assign enabled = ns["enabled"].value %}
 
 {% if enabled == true %}
-  {% assign block_title = section.settings.title | default: "ご注文に関する重要事項" %}
+  {% assign block_title = block.settings.title | default: "ご注文に関する重要事項" %}
 
   <style>
     .marutto-confirmation {
