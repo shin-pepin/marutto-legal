@@ -1,0 +1,45 @@
+api_version = "2026-01"
+
+[[extensions]]
+type = "ui_extension"
+name = "最終確認画面（チェックアウト）"
+handle = "checkout-confirmation-block"
+
+[[extensions.targeting]]
+target = "purchase.checkout.block.render"
+module = "./src/Checkout.tsx"
+
+[[extensions.metafields]]
+namespace = "marutto_confirmation"
+key = "enabled"
+
+[[extensions.metafields]]
+namespace = "marutto_confirmation"
+key = "quantity_text"
+
+[[extensions.metafields]]
+namespace = "marutto_confirmation"
+key = "price_text"
+
+[[extensions.metafields]]
+namespace = "marutto_confirmation"
+key = "payment_text"
+
+[[extensions.metafields]]
+namespace = "marutto_confirmation"
+key = "delivery_text"
+
+[[extensions.metafields]]
+namespace = "marutto_confirmation"
+key = "cancellation_text"
+
+[[extensions.metafields]]
+namespace = "marutto_confirmation"
+key = "period_text"
+
+[extensions.settings]
+  [[extensions.settings.fields]]
+  key = "title"
+  type = "single_line_text_field"
+  name = "タイトル"
+  description = "法定6項目の見出し"
