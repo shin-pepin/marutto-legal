@@ -16,7 +16,6 @@ const textFields = {
   deliveryText: z.string().max(MAX_LONG_TEXT_LENGTH),
   cancellationText: z.string().max(MAX_LONG_TEXT_LENGTH),
   periodText: z.string().max(MAX_TEXT_LENGTH),
-  checkboxLabel: z.string().max(MAX_TEXT_LENGTH),
 };
 
 // Required-text messages (used when enabled: true)
@@ -27,7 +26,6 @@ const requiredMessages: Record<keyof typeof textFields, string> = {
   deliveryText: "引渡時期に関する表示内容を入力してください",
   cancellationText: "解除・返品に関する表示内容を入力してください",
   periodText: "申込期間に関する表示内容を入力してください",
-  checkboxLabel: "チェックボックスラベルを入力してください",
 };
 
 export const confirmationSchema = z
@@ -72,8 +70,6 @@ export const CONFIRMATION_DEFAULTS: ConfirmationFormData = {
     "ご注文確定後のキャンセルは原則お受けできません。返品・交換については返品ポリシーをご確認ください。",
   periodText:
     "特に定めはありません。在庫がなくなり次第、販売を終了する場合がございます。",
-  checkboxLabel:
-    "上記の内容を確認しました",
 };
 
 /**
@@ -91,5 +87,4 @@ export const CONFIRMATION_METAFIELD_KEYS = {
   deliveryText: "delivery_text",
   cancellationText: "cancellation_text",
   periodText: "period_text",
-  checkboxLabel: "checkbox_label",
 } as const;

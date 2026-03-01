@@ -28,7 +28,6 @@ const {
     deliveryText: "デフォルト引渡",
     cancellationText: "デフォルト解除",
     periodText: "デフォルト期間",
-    checkboxLabel: "確認しました",
   }),
   mockSaveConfirmationMetafields: vi.fn().mockResolvedValue(undefined),
 }));
@@ -124,7 +123,6 @@ describe("Confirmation action", () => {
       deliveryText: "テスト引渡",
       cancellationText: "テスト解除",
       periodText: "テスト期間",
-      checkboxLabel: "テスト確認",
     });
 
     const response = await action(args);
@@ -152,7 +150,6 @@ describe("Confirmation action", () => {
       deliveryText: "テスト",
       cancellationText: "テスト",
       periodText: "テスト",
-      checkboxLabel: "テスト",
     });
 
     const response = await action(args);
@@ -169,7 +166,6 @@ describe("Confirmation action", () => {
       deliveryText: "",
       cancellationText: "",
       periodText: "",
-      checkboxLabel: "",
     });
 
     const response = await action(args);
@@ -192,7 +188,6 @@ describe("Confirmation action", () => {
       deliveryText: "テスト引渡",
       cancellationText: "テスト解除",
       periodText: "テスト期間",
-      checkboxLabel: "テスト確認",
     });
 
     const response = await action(args);
